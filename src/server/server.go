@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"strings"
 )
 
 func main() {
@@ -24,8 +23,8 @@ func main() {
 		// output message received
 		fmt.Print("Message Received:", string(message))
 		// sample process for string received
-		newmessage := strings.ToUpper(message)
+		//newmessage := strings.ToUpper(message)
 		// send new string back to client
-		conn.Write([]byte(newmessage + "\n"))
+		//conn.Write([]byte(newmessage + "\n"))
 	}
 }
