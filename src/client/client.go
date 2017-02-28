@@ -7,10 +7,14 @@ import (
 	"os"
 )
 
-func main() {
+var urlServer = "127.0.0.1"
+var portServer = "8081"
+var typeConexion = "tcp"
 
+func main() {
+	var url = urlServer + ":" + portServer
 	// connect to this socket
-	conn, _ := net.Dial("tcp", "127.0.0.1:8081")
+	conn, _ := net.Dial(typeConexion, url)
 	for {
 		// read in input from stdin
 		reader := bufio.NewReader(os.Stdin)
