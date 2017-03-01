@@ -6,7 +6,7 @@ import (
 	"net"
 	"os"
 )
-
+//
 var urlServer = "127.0.0.1"
 var portServer = "8081"
 var typeConexion = "tcp"
