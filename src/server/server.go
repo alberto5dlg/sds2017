@@ -1,30 +1,20 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"net"
+	"net/http"
 )
 
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hi there!")
+}
+
+func redirectToHttps(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://127.0.0.1:8081"+r.RequestURI, http.StatusMovedPermanently)
+}
+
 func main() {
-
-	fmt.Println("Servidor escuchando ...")
-
-	// listen on all interfaces
-	ln, _ := net.Listen("tcp", ":8081")
-
-	// accept connection on port
-	conn, _ := ln.Accept()
-
-	// run loop forever (or until ctrl-c)
-	for {
-		// will listen for message to process ending in newline (\n)
-		message, _ := bufio.NewReader(conn).ReadString('\n')
-		// output message received
-		fmt.Print("Message Received:", string(message))
-		// sample process for string received
-		//newmessage := strings.ToUpper(message)
-		// send new string back to client
-		//conn.Write([]byte(newmessage + "\n"))
-	}
+	http.HandleFunc("/", handler)
+	go http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", nil)
+	http.ListenAndServe(":8080", http.HandlerFunc(redirectToHttps))
 }

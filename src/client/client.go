@@ -1,19 +1,20 @@
 package main
 
 import (
-	"bufio"
+	"crypto/tls"
 	"fmt"
-	"net"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 )
 
-//
 var urlServer = "127.0.0.1"
 var portServer = "8081"
-var typeConexion = "tcp"
 
 func menu() int {
-	var opcion int = 0
+	var opcion int
 	for opcion <= 0 || opcion >= 4 {
 		fmt.Printf("Aplicación SDS Seguridad\n")
 		fmt.Printf("---------------------------------------\n")
@@ -28,22 +29,41 @@ func menu() int {
 	}
 	return opcion
 }
-func main() {
-	var url = urlServer + ":" + portServer
-	// connect to this socket
-	conn, _ := net.Dial(typeConexion, url)
-	var opcion int = menu()
-	fmt.Printf("%d\n", opcion)
-	for {
-
-		// read in input from stdin
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Text to send: ")
-		text, _ := reader.ReadString('\n')
-		// send to socket
-		fmt.Fprintf(conn, text+"\n")
-		// listen for reply
-		//message, _ := bufio.NewReader(conn).ReadString('\n')
-		//fmt.Print("Message from server: " + message)
+func chk(e error) {
+	if e != nil {
+		panic(e)
 	}
+}
+
+func client() {
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	// ** ejemplo de registro
+	data := url.Values{}             // estructura para contener los valores
+	data.Set("cmd", "hola")          // comando (string)
+	data.Set("mensaje", "miusuario") // usuario (string)
+
+	r, err := client.PostForm("https://localhost:10443", data) // enviamos por POST
+	chk(err)
+	io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	fmt.Println()
+}
+
+func main() {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get("https://127.0.0.1:8081")
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(body))
+
 }
