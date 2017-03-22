@@ -3,15 +3,11 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"os"
 )
 
-var urlServer = "127.0.0.1"
-var portServer = "8081"
+var urlServer = "https://127.0.0.1:8081"
 
 func menu() int {
 	var opcion int
@@ -29,36 +25,19 @@ func menu() int {
 	}
 	return opcion
 }
-func chk(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
 
-func client() {
-
+func ignorarHTTPS() http.Client {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
 
-	// ** ejemplo de registro
-	data := url.Values{}             // estructura para contener los valores
-	data.Set("cmd", "hola")          // comando (string)
-	data.Set("mensaje", "miusuario") // usuario (string)
-
-	r, err := client.PostForm("https://localhost:10443", data) // enviamos por POST
-	chk(err)
-	io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	fmt.Println()
+	return *client
 }
 
-func main() {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get("https://127.0.0.1:8081")
+func peticionGET() {
+	client := ignorarHTTPS()
+	resp, err := client.Get(urlServer)
 	if err != nil {
 		panic(err)
 	}
@@ -66,4 +45,16 @@ func main() {
 	body, err := ioutil.ReadAll(resp.Body)
 	fmt.Println(string(body))
 
+}
+
+func main() {
+
+	opc := menu()
+	switch opc {
+	case 1:
+		peticionGET()
+		break
+	case 3:
+		println("Adios")
+	}
 }
