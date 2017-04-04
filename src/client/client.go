@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 )
@@ -14,6 +12,7 @@ import (
 var urlServer = "https://127.0.0.1:8081"
 
 type userRes struct {
+	Method   string
 	User     string
 	Password string
 }
@@ -65,13 +64,11 @@ func login() bool {
 	//Pedir datos
 	var user string
 	fmt.Printf("User: ")
-	err := fmt.Scanf("%s\n", &user)
-	chkError(err)
+	fmt.Scanf("%s\n", &user)
 
 	var password string
 	fmt.Printf("Password: ")
-	err = fmt.Scanf("%s\n", &password)
-	chkError(err)
+	fmt.Scanf("%s\n", &password)
 
 	//serializar a JSON
 	var method = "login"
@@ -93,23 +90,10 @@ func login() bool {
 }
 
 func main() {
-	var url = urlServer + ":" + portServer
-	// connect to this socket
-	conn, _ := net.Dial(typeConexion, url)
+
 	var opcion = menu()
 	if opcion == 1 {
 		login()
 	}
-	for {
 
-		// read in input from stdin
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Text to send: ")
-		text, _ := reader.ReadString('\n')
-		// send to socket
-		fmt.Fprintf(conn, text+"\n")
-		// listen for reply
-		//message, _ := bufio.NewReader(conn).ReadString('\n')
-		//fmt.Print("Message from server: " + message)
-	}
 }
