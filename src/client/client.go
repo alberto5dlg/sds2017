@@ -92,8 +92,12 @@ func login() bool {
 func main() {
 
 	var opcion = menu()
-	if opcion == 1 {
+	switch opcion {
+	case 1:
 		login()
+	case 3:
+		break
+	default:
+		break
 	}
-
 }
