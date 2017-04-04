@@ -1,19 +1,16 @@
 package main
 
 import (
-	"bufio"
+	"crypto/tls"
 	"fmt"
-	"net"
-	"os"
+	"io/ioutil"
+	"net/http"
 )
 
-//
-var urlServer = "127.0.0.1"
-var portServer = "8081"
-var typeConexion = "tcp"
+var urlServer = "https://127.0.0.1:8081"
 
 func menu() int {
-	var opcion int = 0
+	var opcion int
 	for opcion <= 0 || opcion >= 4 {
 		fmt.Printf("Aplicación SDS Seguridad\n")
 		fmt.Printf("---------------------------------------\n")
@@ -28,22 +25,36 @@ func menu() int {
 	}
 	return opcion
 }
-func main() {
-	var url = urlServer + ":" + portServer
-	// connect to this socket
-	conn, _ := net.Dial(typeConexion, url)
-	var opcion int = menu()
-	fmt.Printf("%d\n", opcion)
-	for {
 
-		// read in input from stdin
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Text to send: ")
-		text, _ := reader.ReadString('\n')
-		// send to socket
-		fmt.Fprintf(conn, text+"\n")
-		// listen for reply
-		//message, _ := bufio.NewReader(conn).ReadString('\n')
-		//fmt.Print("Message from server: " + message)
+func ignorarHTTPS() http.Client {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	return *client
+}
+
+func peticionGET() {
+	client := ignorarHTTPS()
+	resp, err := client.Get(urlServer)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(body))
+
+}
+
+func main() {
+
+	opc := menu()
+	switch opc {
+	case 1:
+		peticionGET()
+		break
+	case 3:
+		println("Adios")
 	}
 }
