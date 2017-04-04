@@ -62,6 +62,7 @@ func login() bool {
 	var correct = false
 	fmt.Printf("\n__Login__\n")
 
+	//Pedir datos
 	var user string
 	fmt.Printf("User: ")
 	err := fmt.Scanf("%s\n", &user)
@@ -72,12 +73,16 @@ func login() bool {
 	err = fmt.Scanf("%s\n", &password)
 	chkError(err)
 
-	//llamada al servidor / comprobar paswword
-	m := userRes{user, password}
+	//serializar a JSON
+	var method = "login"
+	m := userRes{method, user, password}
 	mJSON, err := json.Marshal(m)
 	chkError(err)
 	os.Stdout.Write(mJSON)
 	fmt.Printf("\n")
+
+	//Encriptar la información
+	//PASARLO A BASE64 ANTES DE ENVIARLO PARA QUE NO DE PROBLEMAS EL TIPO BYTE
 
 	if correct == false {
 		fmt.Printf("User or password Error\n\n")
