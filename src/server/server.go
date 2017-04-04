@@ -72,6 +72,6 @@ func main() {
 	nuevaCuenta("Fer", "Instagram", "ferchu", "adios", gUsuarios)
 	guardarBD(gUsuarios)
 	//fmt.Println(gUsuarios["Fer"].Info["Instagram"])
-	//conectServer()
+	conectServer()
 
 }
