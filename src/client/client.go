@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +17,12 @@ var urlServer = "https://127.0.0.1:8081"
 type userRes struct {
 	User     string
 	Password string
+}
+
+type structUser struct {
+	User     string
+	Password string
+	Email    string
 }
 
 func chkError(err error) {
@@ -111,6 +119,15 @@ func loginPost(js []byte) bool {
 
 	return false
 }
+func registroPost(js []byte) bool {
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "registro")
+	data.Set("mensaje", encode64(js))
+	client.PostForm(urlServer, data)
+	return true
+}
 
 func main() {
 
@@ -118,9 +135,64 @@ func main() {
 	switch opcion {
 	case 1:
 		login()
+	case 2:
+		registro()
 	case 3:
 		break
 	default:
 		break
 	}
+}
+
+func registro() bool {
+	var user, passwd, tempPasswd, mail string
+	var correct bool = false
+	//Pedimos el nombre de usuario
+	fmt.Println("Introduce tu nombre de usuario")
+	n, err := fmt.Scanf("%s\n", &user)
+	if err != nil {
+		fmt.Println(n, err)
+	}
+	//Pedimos la contraseña
+	for {
+		fmt.Println("Introduce tu contraseña")
+		n, err = fmt.Scanf("%s\n", &passwd)
+		if err != nil {
+			fmt.Println(n, err)
+		}
+
+		//Volvemos a pedir la contraseña
+		fmt.Println("Vuelve a introducir tu contraseña")
+		n, err = fmt.Scanf("%s\n", &tempPasswd)
+		if err != nil {
+			fmt.Println(n, err)
+		}
+		if passwd == tempPasswd {
+			break
+		} else {
+			fmt.Println("Las contraseñas no coinciden")
+		}
+	}
+	//Pedimos el email
+	fmt.Printf("Introduce tu email\n")
+	n, err = fmt.Scanf("%s\n", &mail)
+	if err != nil {
+		fmt.Println(n, err)
+	}
+	//Generamos el hash a partir de la contraseña
+	hasher := md5.New()
+	hasher.Write([]byte(passwd))
+	hex.EncodeToString(hasher.Sum(nil))
+
+	//Ahora almacenamos el usuario en formato Json
+	newUser := structUser{user, passwd, mail}
+	b, error := json.Marshal(&newUser)
+	if err != nil {
+		fmt.Println(error)
+	}
+	correct = registroPost(b)
+	if correct {
+		fmt.Printf("Registrado correctamente\n")
+	}
+	return correct
 }
