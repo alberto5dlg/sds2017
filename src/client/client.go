@@ -92,19 +92,20 @@ func login() bool {
 	fmt.Printf("Password: ")
 	fmt.Scanf("%s\n", &password)
 
+	hasher := md5.New()
+	hasher.Write([]byte(password))
+	password = hex.EncodeToString(hasher.Sum(nil))
+
 	//serializar a JSON
 	m := userRes{user, password}
 	loginJSON, err := json.Marshal(m)
 	chkError(err)
 	correct := loginPost(loginJSON)
 
-	//Encriptar la información
-	//PASARLO A BASE64 ANTES DE ENVIARLO PARA QUE NO DE PROBLEMAS EL TIPO BYTE
-
-	if correct == false {
-		fmt.Printf("User or password Error\n\n")
-	} else {
+	if correct {
 		fmt.Printf("Welcome!\n\n")
+	} else {
+		fmt.Printf("Error!\n\n")
 	}
 	return correct
 }
