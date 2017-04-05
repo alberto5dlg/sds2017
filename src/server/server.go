@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,6 +28,20 @@ type usuario struct {
 	Email    string
 	Password string
 	Info     map[string]datos
+}
+
+type resp struct {
+	Ok  bool
+	Msg string
+}
+
+func response(w io.Writer, ok bool, msg string) {
+	r := resp{Ok: ok, Msg: msg}
+	rJSON, err := json.Marshal(&r)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(rJSON)
 }
 
 func cargarBD() bool {
@@ -73,13 +88,13 @@ func decode64(s string) []byte {
 }
 
 func compLogin(resp string) bool {
+	var log login
 	datos := decode64(resp)
-	log := make(map[string]login)
-	json.Unmarshal(datos, log)
+	json.Unmarshal(datos, &log)
 	fmt.Println(log)
-	//if gUsuarios[log.User].Password == log.Password {
-	//return true
-	//}
+	if gUsuarios[log.User].Password == log.Password {
+		return true
+	}
 	return false
 }
 
@@ -89,7 +104,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Form.Get("cmd") {
 	case "login":
-		compLogin(r.Form.Get("mensaje"))
+		if compLogin(r.Form.Get("mensaje")) {
+			response(w, true, "Login Correcto")
+		} else {
+			response(w, false, "Login Erroneo")
+		}
 	}
 
 }
@@ -108,6 +127,6 @@ func conectServer() {
 
 func main() {
 	cargarBD()
-	//conectServer()
+	conectServer()
 	guardarBD()
 }
