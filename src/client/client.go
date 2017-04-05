@@ -25,6 +25,11 @@ type structUser struct {
 	Email    string
 }
 
+type resp struct {
+	Ok  bool
+	Msg string
+}
+
 func chkError(err error) {
 	if err != nil {
 		panic(err)
@@ -76,7 +81,6 @@ func decode64(s string) []byte {
 }
 
 func login() bool {
-	var correct = false
 	fmt.Printf("\n__Login__\n")
 
 	//Pedir datos
@@ -92,7 +96,7 @@ func login() bool {
 	m := userRes{user, password}
 	loginJSON, err := json.Marshal(m)
 	chkError(err)
-	loginPost(loginJSON)
+	correct := loginPost(loginJSON)
 
 	//Encriptar la información
 	//PASARLO A BASE64 ANTES DE ENVIARLO PARA QUE NO DE PROBLEMAS EL TIPO BYTE
@@ -112,11 +116,15 @@ func loginPost(js []byte) bool {
 	data := url.Values{}
 	data.Set("cmd", "login")
 	data.Set("mensaje", encode64(js))
-	client.PostForm(urlServer, data) // enviamos por POST
-	fmt.Printf("enviado!\n\n")
-	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	//fmt.Println()
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	chkError(err)
 
+	var respJS resp
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	json.NewDecoder(r.Body).Decode(&respJS)
+	if respJS.Ok {
+		return true
+	}
 	return false
 }
 func registroPost(js []byte) bool {
