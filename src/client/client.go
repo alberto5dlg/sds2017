@@ -17,6 +17,12 @@ type userRes struct {
 	Password string
 }
 
+type structUser struct {
+	User     string
+	Password string
+	Email    string
+}
+
 func chkError(err error) {
 	if err != nil {
 		panic(err)
@@ -123,4 +129,57 @@ func main() {
 	default:
 		break
 	}
+}
+
+func registro() bool {
+	var user, passwd, tempPasswd, mail string
+	var correct bool = false
+	//Pedimos el nombre de usuario
+	fmt.Println("Introduce tu nombre de usuario")
+	n, err := fmt.Scanf("%s\n", &user)
+	if err != nil {
+		fmt.Println(n, err)
+	}
+	//Pedimos la contraseña
+	for {
+		fmt.Println("Introduce tu contraseña")
+		n, err = fmt.Scanf("%s\n", &passwd)
+		if err != nil {
+			fmt.Println(n, err)
+		}
+
+		//Volvemos a pedir la contraseña
+		fmt.Println("Vuelve a introducir tu contraseña")
+		n, err = fmt.Scanf("%s\n", &tempPasswd)
+		if err != nil {
+			fmt.Println(n, err)
+		}
+		if passwd == tempPasswd {
+			break
+		} else {
+			fmt.Println("Las contraseñas no coinciden")
+		}
+	}
+
+	//Pedimos el email
+	fmt.Printf("Introduce tu email\n")
+	n, err = fmt.Scanf("%s\n", &mail)
+	if err != nil {
+		fmt.Println(n, err)
+	}
+
+	//Ahora almacenamos el usuario en formato Json
+
+	newUser := structUser{user, passwd, mail}
+	fmt.Println(newUser)
+	b, error := json.Marshal(&newUser)
+	if err != nil {
+		fmt.Println(error)
+	}
+	fmt.Println(string(b))
+
+	//ioutil.WriteFile("./usuarios.txt", b, 0644)
+
+	correct = true
+	return correct
 }
