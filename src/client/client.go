@@ -182,7 +182,7 @@ func registro() bool {
 	//Generamos el hash a partir de la contraseña
 	hasher := md5.New()
 	hasher.Write([]byte(passwd))
-	hex.EncodeToString(hasher.Sum(nil))
+	passwd = hex.EncodeToString(hasher.Sum(nil))
 
 	//Ahora almacenamos el usuario en formato Json
 	newUser := structUser{user, passwd, mail}
