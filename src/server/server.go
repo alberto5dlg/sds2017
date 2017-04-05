@@ -19,6 +19,12 @@ type login struct {
 	Password string
 }
 
+type registro struct {
+	User     string
+	Password string
+	Email    string
+}
+
 type datos struct {
 	User string
 	Pass string
@@ -91,11 +97,18 @@ func compLogin(resp string) bool {
 	var log login
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
-	fmt.Println(log)
 	if gUsuarios[log.User].Password == log.Password {
 		return true
 	}
 	return false
+}
+
+func crearUsuario(resp string) bool {
+	var regis registro
+	datos := decode64(resp)
+	json.Unmarshal(datos, &regis)
+	nuevoUsuario(regis.User, regis.Password, regis.Email)
+	return true
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -109,8 +122,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			response(w, false, "Login Erroneo")
 		}
-	}
 
+	case "registro":
+		if crearUsuario(r.Form.Get("mensaje")) {
+			response(w, true, "Usuario Creado")
+		}
+
+	}
 }
 
 func conectServer() {
