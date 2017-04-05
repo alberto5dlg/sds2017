@@ -2,17 +2,17 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"net/url"
 )
 
 var urlServer = "https://127.0.0.1:8081"
 
 type userRes struct {
-	Method   string
 	User     string
 	Password string
 }
@@ -53,11 +53,21 @@ func peticionGET() {
 	body, err := ioutil.ReadAll(resp.Body)
 	chkError(err)
 	fmt.Println(string(body))
+}
 
+// función para codificar de []bytes a string (Base64)
+func encode64(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data) // sólo utiliza caracteres "imprimibles"
+}
+
+// función para decodificar de string a []bytes (Base64)
+func decode64(s string) []byte {
+	b, err := base64.StdEncoding.DecodeString(s) // recupera el formato original
+	chkError(err)                                // comprobamos el error
+	return b                                     // devolvemos los datos originales
 }
 
 func login() bool {
-
 	var correct = false
 	fmt.Printf("\n__Login__\n")
 
@@ -71,12 +81,10 @@ func login() bool {
 	fmt.Scanf("%s\n", &password)
 
 	//serializar a JSON
-	var method = "login"
-	m := userRes{method, user, password}
-	mJSON, err := json.Marshal(m)
+	m := userRes{user, password}
+	loginJSON, err := json.Marshal(m)
 	chkError(err)
-	os.Stdout.Write(mJSON)
-	fmt.Printf("\n")
+	loginPost(loginJSON)
 
 	//Encriptar la información
 	//PASARLO A BASE64 ANTES DE ENVIARLO PARA QUE NO DE PROBLEMAS EL TIPO BYTE
@@ -87,6 +95,21 @@ func login() bool {
 		fmt.Printf("Welcome!\n\n")
 	}
 	return correct
+}
+
+func loginPost(js []byte) bool {
+
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "login")
+	data.Set("mensaje", encode64(js))
+	client.PostForm(urlServer, data) // enviamos por POST
+	fmt.Printf("enviado!\n\n")
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	//fmt.Println()
+
+	return false
 }
 
 func main() {
