@@ -134,6 +134,7 @@ func registroPost(js []byte) bool {
 	data.Set("cmd", "registro")
 	data.Set("mensaje", encode64(js))
 	client.PostForm(urlServer, data)
+	fmt.Println("a")
 	return true
 }
 
