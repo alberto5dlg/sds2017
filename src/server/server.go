@@ -19,6 +19,13 @@ type login struct {
 	Password string
 }
 
+type cuenta struct {
+	Boss     string
+	Servicio string
+	User     string
+	Password string
+}
+
 type registro struct {
 	User     string
 	Password string
@@ -76,6 +83,14 @@ func nuevaCuenta(usuario string, servicio string, username string, password stri
 	gUsuarios[usuario].Info[servicio] = newinfo
 }
 
+func crearCuenta(resp string) bool {
+	var cuen cuenta
+	datos := decode64(resp)
+	json.Unmarshal(datos, &cuen)
+	nuevaCuenta(cuen.Boss, cuen.Servicio, cuen.User, cuen.Password)
+	return true
+}
+
 func nuevoUsuario(username string, password string, email string) {
 	var newUser usuario
 	newUser.Password = password
@@ -126,6 +141,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	case "registro":
 		if crearUsuario(r.Form.Get("mensaje")) {
 			response(w, true, "Usuario Creado")
+		}
+
+	case "añadirCuenta":
+		if crearCuenta(r.Form.Get("mensaje")) {
+			response(w, true, "Cuenta Creada")
+		} else {
+			response(w, false, "No se ha añadido Error")
 		}
 
 	}

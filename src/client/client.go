@@ -19,6 +19,13 @@ type userRes struct {
 	Password string
 }
 
+type cuentaRes struct {
+	Boss     string
+	Servicio string
+	User     string
+	Password string
+}
+
 type structUser struct {
 	User     string
 	Password string
@@ -85,11 +92,11 @@ func login() bool {
 
 	//Pedir datos
 	var user string
-	fmt.Printf("User: ")
+	fmt.Printf("Usuario: ")
 	fmt.Scanf("%s\n", &user)
 
 	var password string
-	fmt.Printf("Password: ")
+	fmt.Printf("Contraseña: ")
 	fmt.Scanf("%s\n", &password)
 
 	hasher := md5.New()
@@ -103,7 +110,7 @@ func login() bool {
 	correct := loginPost(loginJSON)
 
 	if correct {
-		fmt.Printf("Welcome!\n\n")
+		fmt.Printf("Bienvenido!\n\n")
 	} else {
 		fmt.Printf("Error!\n\n")
 	}
@@ -128,6 +135,7 @@ func loginPost(js []byte) bool {
 	}
 	return false
 }
+
 func registroPost(js []byte) bool {
 	client := ignorarHTTPS()
 
@@ -137,6 +145,56 @@ func registroPost(js []byte) bool {
 	client.PostForm(urlServer, data)
 	fmt.Println("a")
 	return true
+}
+
+func añadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
+	fmt.Printf("\n__Añadir nueva cuenta__\n")
+
+	//Pedir datos
+	var servicio string
+	fmt.Printf("Nuevo servicio: ")
+	fmt.Scanf("%s\n", &servicio)
+
+	//Pedir datos
+	var user string
+	fmt.Printf("Nuevo nombre de usuario: ")
+	fmt.Scanf("%s\n", &user)
+
+	var password string
+	fmt.Printf("Nueva contraseña: ")
+	fmt.Scanf("%s\n", &password)
+
+	//serializar a JSON
+	m := cuentaRes{boss, servicio, user, password}
+	cuentaJSON, err := json.Marshal(m)
+	chkError(err)
+	correct := añadirCuentaPost(cuentaJSON)
+
+	if correct {
+		fmt.Printf("Añadida correctamente!\n\n")
+	} else {
+		fmt.Printf("Error!\n\n")
+	}
+	return correct
+}
+
+func añadirCuentaPost(js []byte) bool {
+
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "añadirCuenta")
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	chkError(err)
+
+	var respJS resp
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	json.NewDecoder(r.Body).Decode(&respJS)
+	if respJS.Ok {
+		return true
+	}
+	return false
 }
 
 func main() {
@@ -156,7 +214,7 @@ func main() {
 
 func registro() bool {
 	var user, passwd, tempPasswd, mail string
-	var correct bool = false
+	var correct bool
 	//Pedimos el nombre de usuario
 	fmt.Println("Introduce tu nombre de usuario")
 	n, err := fmt.Scanf("%s\n", &user)
