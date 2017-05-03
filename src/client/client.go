@@ -197,6 +197,47 @@ func añadirCuentaPost(js []byte) bool {
 	return false
 }
 
+func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
+	fmt.Printf("\n__Eliminar cuenta__\n")
+
+	//Pedir datos
+	var servicio string
+	fmt.Printf("Selecciona el servicio: ")
+	fmt.Scanf("%s\n", &servicio)
+
+	//serializar a JSON
+	m := cuentaRes{boss, servicio, "", ""}
+	cuentaJSON, err := json.Marshal(m)
+	chkError(err)
+	correct := eliminarCuentaPost(cuentaJSON)
+
+	if correct {
+		fmt.Printf("\n\n")
+	} else {
+		fmt.Printf("Error!\n\n")
+	}
+	return correct
+}
+
+func eliminarCuentaPost(js []byte) bool {
+
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "eliminarCuenta")
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	chkError(err)
+
+	var respJS resp
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	json.NewDecoder(r.Body).Decode(&respJS)
+	if respJS.Ok {
+		return true
+	}
+	return false
+}
+
 func main() {
 
 	var opcion = menu()

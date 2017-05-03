@@ -91,6 +91,14 @@ func crearCuenta(resp string) bool {
 	return true
 }
 
+func eliminarCuenta(resp string) bool {
+	var cuen cuenta
+	datos := decode64(resp)
+	json.Unmarshal(datos, &cuen)
+	delete(gUsuarios[cuen.Boss].Info, cuen.Servicio)
+	return true
+}
+
 func nuevoUsuario(username string, password string, email string) {
 	var newUser usuario
 	newUser.Password = password
@@ -148,6 +156,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			response(w, true, "Cuenta Creada")
 		} else {
 			response(w, false, "No se ha añadido Error")
+		}
+
+	case "eliminarCuenta":
+		if eliminarCuenta(r.Form.Get("mensaje")) {
+			response(w, true, "Cuenta Eliminada")
+		} else {
+			response(w, false, "No se ha eliminado Error")
 		}
 
 	}
