@@ -183,10 +183,10 @@ func conectServer() {
 }
 
 func main() {
-	decryptFile()
+	//decryptFile()
 	cargarBD()
-	encryptFile()
+	//encryptFile()
 	conectServer()
 	guardarBD()
-	encryptFile()
+	//encryptFile()
 }
