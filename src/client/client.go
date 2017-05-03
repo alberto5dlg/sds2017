@@ -20,7 +20,7 @@ type datos struct {
 	User string
 	Pass string
 }
-type resp struct {
+type respDatos struct {
 	Ok  bool
 	Msg map[string]datos
 }
@@ -339,7 +339,7 @@ func getCuentas(user string) map[string]datos {
 	var respuestaFinal map[string]datos
 	json.NewDecoder(r.Body).Decode(&respJS)
 	if respJS.Ok {
-		respuestaFinal = respJS.Msg
+		//respuestaFinal = respJS.Msg
 		return respuestaFinal
 	}
 	return respuestaFinal
@@ -355,7 +355,7 @@ func menuLogueado(username string) {
 	fmt.Println("-------------------------")
 	fmt.Printf("1 - Consultar cuentas\n")
 	fmt.Printf("2 - Agregar cuenta\n")
-	fmt.Printf("3 - Eliminar cuenta")
+	fmt.Printf("3 - Eliminar cuenta\n")
 	fmt.Printf("4 - Salir\n")
 	fmt.Printf("Opción: ")
 	fmt.Scanf("%d\n", &opcion)

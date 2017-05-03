@@ -57,16 +57,6 @@ func response(w io.Writer, ok bool, msg string) {
 	w.Write(rJSON)
 }
 
-func responseJSON(w io.Writer, ok bool, data []byte) {
-	r := resp{Ok: ok, Msg: data}
-	rJSON, err := json.Marshal(&r)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(rJSON)
-
-}
-
 func cargarBD() bool {
 	raw, err := ioutil.ReadFile("bbdd.json")
 	if err != nil {
@@ -131,7 +121,6 @@ func compLogin(resp string) bool {
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
 	if gUsuarios[log.User].Password == log.Password {
-		fmt.Println("a")
 		return true
 	}
 	return false
@@ -176,7 +165,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			response(w, false, "No se ha eliminado Error")
 		}
 	case "consultaCuentas":
-		formJSON, err := json.Marshal(gUsuarios[usuario].Info)
+		break
 
 	}
 }
@@ -191,11 +180,6 @@ func conectServer() {
 	<-stopChan
 	log.Println("Apagando servidor ...")
 	log.Println("Servidor detenido correctamente")
-}
-
-func enviarDatos(usuario string) {
-	formJSON, err := json.Marshal(gUsuarios[usuario].Info)
-
 }
 
 func main() {
