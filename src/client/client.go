@@ -363,9 +363,9 @@ func menuLogueado(username string) {
 	case 1:
 		consultarCuentas(username)
 	case 2:
-
+		añadirCuenta(username)
 	case 3:
-		break
+		eliminarCuenta(username)
 	default:
 		break
 	}
