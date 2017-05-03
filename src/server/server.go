@@ -131,6 +131,7 @@ func compLogin(resp string) bool {
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
 	if gUsuarios[log.User].Password == log.Password {
+		fmt.Println("a")
 		return true
 	}
 	return false
