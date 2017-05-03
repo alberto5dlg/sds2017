@@ -10,10 +10,20 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 var urlServer = "https://127.0.0.1:8081"
 
+type datos struct {
+	User string
+	Pass string
+}
+type resp struct {
+	Ok  bool
+	Msg map[string]datos
+}
 type userRes struct {
 	User     string
 	Password string
@@ -111,6 +121,7 @@ func login() bool {
 
 	if correct {
 		fmt.Printf("Bienvenido!\n\n")
+		menuLogueado(user)
 	} else {
 		fmt.Printf("Error!\n\n")
 	}
@@ -304,4 +315,58 @@ func registro() bool {
 		fmt.Printf("Registrado correctamente\n")
 	}
 	return correct
+}
+func convert(b []byte) string {
+	s := make([]string, len(b))
+	for i := range b {
+		s[i] = strconv.Itoa(int(b[i]))
+	}
+	return strings.Join(s, ",")
+}
+func getCuentas(user string) map[string]datos {
+	userTemp := structUser{user, "", ""}
+	js, err := json.Marshal(userTemp)
+	chkError(err)
+	client := ignorarHTTPS()
+	data := url.Values{}
+	data.Set("cmd", "consultarCuentas")
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	fmt.Printf("enviado!\n\n")
+	chkError(err)
+
+	var respJS resp
+	var respuestaFinal map[string]datos
+	json.NewDecoder(r.Body).Decode(&respJS)
+	if respJS.Ok {
+		respuestaFinal = respJS.Msg
+		return respuestaFinal
+	}
+	return respuestaFinal
+
+}
+func consultarCuentas(user string) {
+
+}
+
+func menuLogueado(username string) {
+	var opcion int
+	fmt.Printf("----------Bienvenido %s-------", username)
+	fmt.Println("-------------------------")
+	fmt.Printf("1 - Consultar cuentas\n")
+	fmt.Printf("2 - Agregar cuenta\n")
+	fmt.Printf("3 - Eliminar cuenta")
+	fmt.Printf("4 - Salir\n")
+	fmt.Printf("Opción: ")
+	fmt.Scanf("%d\n", &opcion)
+	switch opcion {
+	case 1:
+		consultarCuentas(username)
+	case 2:
+
+	case 3:
+		break
+	default:
+		break
+	}
 }
