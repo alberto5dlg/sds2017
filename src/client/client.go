@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
@@ -368,6 +369,19 @@ func registro() bool {
 	return correct
 }
 
+func generarPassword() {
+	var str_size int
+	fmt.Printf("Inserta longitud del Password: ")
+	fmt.Scanf("%d\n", &str_size)
+	alphanum := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, str_size)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	fmt.Println(string(bytes))
+}
+
 func menuLogueado(username string) {
 	var opcion int
 	fmt.Printf("----------Bienvenido %s-------", username)
@@ -375,7 +389,8 @@ func menuLogueado(username string) {
 	fmt.Printf("1 - Consultar cuentas\n")
 	fmt.Printf("2 - Agregar cuenta\n")
 	fmt.Printf("3 - Eliminar cuenta\n")
-	fmt.Printf("4 - Salir\n")
+	fmt.Printf("4 - Generar Password\n")
+	fmt.Printf("5 - Salir\n")
 	fmt.Printf("Opción: ")
 	fmt.Scanf("%d\n", &opcion)
 	switch opcion {
@@ -385,6 +400,8 @@ func menuLogueado(username string) {
 		añadirCuenta(username)
 	case 3:
 		eliminarCuenta(username)
+	case 4:
+		generarPassword()
 	default:
 		break
 	}
