@@ -366,6 +366,7 @@ func registro() bool {
 	if correct {
 		fmt.Printf("Registrado correctamente\n")
 	}
+	menuLogueado(newUser.User)
 	return correct
 }
 
@@ -384,25 +385,29 @@ func generarPassword() {
 
 func menuLogueado(username string) {
 	var opcion int
-	fmt.Printf("----------Bienvenido %s-------", username)
-	fmt.Println("-------------------------")
-	fmt.Printf("1 - Consultar cuentas\n")
-	fmt.Printf("2 - Agregar cuenta\n")
-	fmt.Printf("3 - Eliminar cuenta\n")
-	fmt.Printf("4 - Generar Password\n")
-	fmt.Printf("5 - Salir\n")
-	fmt.Printf("Opción: ")
-	fmt.Scanf("%d\n", &opcion)
-	switch opcion {
-	case 1:
-		consultarCuentas(username)
-	case 2:
-		añadirCuenta(username)
-	case 3:
-		eliminarCuenta(username)
-	case 4:
-		generarPassword()
-	default:
-		break
+	for opcion != 5 {
+		fmt.Printf("----------Bienvenido %s-------", username)
+		fmt.Println("-------------------------")
+		fmt.Printf("1 - Consultar cuentas\n")
+		fmt.Printf("2 - Agregar cuenta\n")
+		fmt.Printf("3 - Eliminar cuenta\n")
+		fmt.Printf("4 - Generar Password\n")
+		fmt.Printf("5 - Salir\n")
+		fmt.Printf("Opción: ")
+		fmt.Scanf("%d\n", &opcion)
+		switch opcion {
+		case 1:
+			consultarCuentas(username)
+		case 2:
+			añadirCuenta(username)
+		case 3:
+			eliminarCuenta(username)
+		case 4:
+			generarPassword()
+		case 5:
+			break
+		default:
+			fmt.Println("Opcion Incorrecta !!")
+		}
 	}
 }
