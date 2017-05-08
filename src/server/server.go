@@ -41,6 +41,8 @@ type usuario struct {
 	Email    string
 	Password string
 	Info     map[string]datos
+	Tarjetas map[string]tarjeta
+	Notas    map[string]notas
 }
 
 type resp struct {
@@ -51,6 +53,18 @@ type resp struct {
 type respJSON struct {
 	Ok   bool
 	Info map[string]datos
+}
+
+type tarjeta struct {
+	Entidad  string
+	NTarjeta string
+	Fecha    string
+	CodSeg   string
+}
+
+type notas struct {
+	Titulo string
+	Cuerpo string
 }
 
 func response(w io.Writer, ok bool, msg string) {
@@ -126,8 +140,25 @@ func nuevoUsuario(username string, password string, email string) {
 	newUser.Password = password
 	newUser.Email = email
 	newUser.Info = make(map[string]datos)
+	newUser.Tarjetas = make(map[string]tarjeta)
+	newUser.Notas = make(map[string]notas)
 	gUsuarios[username] = newUser
+}
 
+func anyadirTarjeta(username string, entidad string, nTarj string, fecha string, codSeg string) {
+	var card tarjeta
+	card.Entidad = entidad
+	card.NTarjeta = nTarj
+	card.Fecha = fecha
+	card.CodSeg = codSeg
+	gUsuarios[username].Tarjetas[entidad] = card
+}
+
+func anyadirNotas(username string, titulo string, cuerpo string) {
+	var notes notas
+	notes.Titulo = titulo
+	notes.Cuerpo = cuerpo
+	gUsuarios[username].Notas[titulo] = notes
 }
 
 func decode64(s string) []byte {
@@ -205,7 +236,7 @@ func conectServer() {
 
 func main() {
 	//decryptFile()
-	cargarBD()
+	//cargarBD()
 	//encryptFile()
 	conectServer()
 	guardarBD()
