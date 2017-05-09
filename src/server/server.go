@@ -48,8 +48,22 @@ type resp struct {
 	Msg string
 }
 
+type respJSON struct {
+	Ok   bool
+	Info map[string]datos
+}
+
 func response(w io.Writer, ok bool, msg string) {
 	r := resp{Ok: ok, Msg: msg}
+	rJSON, err := json.Marshal(&r)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(rJSON)
+}
+
+func responseJSON(w io.Writer, ok bool, info map[string]datos) {
+	r := respJSON{Ok: ok, Info: info}
 	rJSON, err := json.Marshal(&r)
 	if err != nil {
 		panic(err)
@@ -97,6 +111,14 @@ func eliminarCuenta(resp string) bool {
 	json.Unmarshal(datos, &cuen)
 	delete(gUsuarios[cuen.Boss].Info, cuen.Servicio)
 	return true
+}
+
+func consultarCuentas(resp string) map[string]datos {
+	var cuen cuenta
+	datos := decode64(resp)
+	json.Unmarshal(datos, &cuen)
+
+	return gUsuarios[cuen.Boss].Info
 }
 
 func nuevoUsuario(username string, password string, email string) {
@@ -164,9 +186,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			response(w, false, "No se ha eliminado Error")
 		}
-	case "consultaCuentas":
-		break
-
+	case "consultarCuentas":
+		responseJSON(w, true, consultarCuentas(r.Form.Get("mensaje")))
 	}
 }
 
