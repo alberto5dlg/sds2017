@@ -10,8 +10,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 )
 
 var urlServer = "https://127.0.0.1:8081"
@@ -20,10 +18,7 @@ type datos struct {
 	User string
 	Pass string
 }
-type respDatos struct {
-	Ok  bool
-	Msg map[string]datos
-}
+
 type userRes struct {
 	User     string
 	Password string
@@ -45,6 +40,11 @@ type structUser struct {
 type resp struct {
 	Ok  bool
 	Msg string
+}
+
+type respJSON struct {
+	Ok   bool
+	Info map[string]datos
 }
 
 func chkError(err error) {
@@ -158,6 +158,52 @@ func registroPost(js []byte) bool {
 	return true
 }
 
+func consultarCuentas(boss string) bool { //boss es el nombre del usuario logueado
+	fmt.Printf("\n__Tus cuentas__\n")
+
+	//serializar a JSON
+	m := cuentaRes{boss, "", "", ""}
+	cuentaJSON, err := json.Marshal(m)
+	chkError(err)
+	correct := consultarCuentasPost(cuentaJSON)
+
+	return correct
+}
+
+func consultarCuentasPost(js []byte) bool {
+
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "consultarCuentas")
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	chkError(err)
+
+	var respJS respJSON
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	json.NewDecoder(r.Body).Decode(&respJS)
+	fmt.Println(imprimirConsulta(respJS.Info))
+
+	if imprimirConsulta(respJS.Info) == "No hay ninguna cuenta.\n" {
+		return false
+	}
+	return true
+}
+
+func imprimirConsulta(info map[string]datos) string {
+	var s string
+	if len(info) == 0 {
+		s = "No hay ninguna cuenta.\n"
+	} else {
+
+		for key, val := range info {
+			s += fmt.Sprintf("#%s:\n\tUsuario: %s\n\tContraseña: %s\n", key, val.User, val.Pass)
+		}
+	}
+	return s
+}
+
 func añadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Añadir nueva cuenta__\n")
 
@@ -209,6 +255,11 @@ func añadirCuentaPost(js []byte) bool {
 }
 
 func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
+
+	if consultarCuentas(boss) == false {
+		return false
+	}
+
 	fmt.Printf("\n__Eliminar cuenta__\n")
 
 	//Pedir datos
@@ -315,38 +366,6 @@ func registro() bool {
 		fmt.Printf("Registrado correctamente\n")
 	}
 	return correct
-}
-func convert(b []byte) string {
-	s := make([]string, len(b))
-	for i := range b {
-		s[i] = strconv.Itoa(int(b[i]))
-	}
-	return strings.Join(s, ",")
-}
-func getCuentas(user string) map[string]datos {
-	userTemp := structUser{user, "", ""}
-	js, err := json.Marshal(userTemp)
-	chkError(err)
-	client := ignorarHTTPS()
-	data := url.Values{}
-	data.Set("cmd", "consultarCuentas")
-	data.Set("mensaje", encode64(js))
-	r, err := client.PostForm(urlServer, data) // enviamos por POST
-	fmt.Printf("enviado!\n\n")
-	chkError(err)
-
-	var respJS resp
-	var respuestaFinal map[string]datos
-	json.NewDecoder(r.Body).Decode(&respJS)
-	if respJS.Ok {
-		//respuestaFinal = respJS.Msg
-		return respuestaFinal
-	}
-	return respuestaFinal
-
-}
-func consultarCuentas(user string) {
-
 }
 
 func menuLogueado(username string) {
