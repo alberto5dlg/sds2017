@@ -55,11 +55,25 @@ type respJSON struct {
 	Info map[string]datos
 }
 
+type nTarjeta struct {
+	Username string
+	Entidad  string
+	NTarjeta string
+	Fecha    string
+	CodSeg   string
+}
+
 type tarjeta struct {
 	Entidad  string
 	NTarjeta string
 	Fecha    string
 	CodSeg   string
+}
+
+type nNotas struct {
+	Username string
+	Titulo   string
+	Cuerpo   string
 }
 
 type notas struct {
@@ -144,6 +158,13 @@ func nuevoUsuario(username string, password string, email string) {
 	newUser.Notas = make(map[string]notas)
 	gUsuarios[username] = newUser
 }
+func crearTarjeta(resp string) bool {
+	var tar nTarjeta
+	datos := decode64(resp)
+	json.Unmarshal(datos, &tar)
+	anyadirTarjeta(tar.Username, tar.Entidad, tar.NTarjeta, tar.Fecha, tar.CodSeg)
+	return true
+}
 
 func anyadirTarjeta(username string, entidad string, nTarj string, fecha string, codSeg string) {
 	var card tarjeta
@@ -152,6 +173,14 @@ func anyadirTarjeta(username string, entidad string, nTarj string, fecha string,
 	card.Fecha = fecha
 	card.CodSeg = codSeg
 	gUsuarios[username].Tarjetas[entidad] = card
+}
+
+func crearNota(resp string) bool {
+	var not nNotas
+	datos := decode64(resp)
+	json.Unmarshal(datos, &not)
+	anyadirNotas(not.Username, not.Titulo, not.Cuerpo)
+	return true
 }
 
 func anyadirNotas(username string, titulo string, cuerpo string) {
@@ -219,6 +248,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "consultarCuentas":
 		responseJSON(w, true, consultarCuentas(r.Form.Get("mensaje")))
+
+	case "añadirTarjeta":
+		if crearTarjeta(r.Form.Get("mensaje")) {
+			response(w, true, "Añadida la Tarjeta")
+		} else {
+			response(w, false, "No se ha podido añadir")
+		}
+	case "añadirNota":
+		if crearNota(r.Form.Get("mensaje")) {
+			response(w, true, "Añadida la Nota")
+		} else {
+			response(w, false, "No se ha podido añadir")
+		}
 	}
 }
 
@@ -236,7 +278,7 @@ func conectServer() {
 
 func main() {
 	//decryptFile()
-	//cargarBD()
+	cargarBD()
 	//encryptFile()
 	conectServer()
 	guardarBD()
