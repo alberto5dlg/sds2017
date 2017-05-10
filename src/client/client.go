@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
@@ -10,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 var urlServer = "https://127.0.0.1:8081"
@@ -45,6 +48,20 @@ type resp struct {
 type respJSON struct {
 	Ok   bool
 	Info map[string]datos
+}
+
+type tarjeta struct {
+	Username string
+	Entidad  string
+	NTarjeta string
+	Fecha    string
+	CodSeg   string
+}
+
+type notas struct {
+	Username string
+	Titulo   string
+	Cuerpo   string
 }
 
 func chkError(err error) {
@@ -117,7 +134,7 @@ func login() bool {
 	m := userRes{user, password}
 	loginJSON, err := json.Marshal(m)
 	chkError(err)
-	correct := loginPost(loginJSON)
+	correct := metodoPost(loginJSON, "login")
 
 	if correct {
 		fmt.Printf("Bienvenido!\n\n")
@@ -128,39 +145,8 @@ func login() bool {
 	return correct
 }
 
-func loginPost(js []byte) bool {
-
-	client := ignorarHTTPS()
-
-	data := url.Values{}
-	data.Set("cmd", "login")
-	data.Set("mensaje", encode64(js))
-	r, err := client.PostForm(urlServer, data) // enviamos por POST
-	chkError(err)
-
-	var respJS resp
-	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	json.NewDecoder(r.Body).Decode(&respJS)
-	if respJS.Ok {
-		return true
-	}
-	return false
-}
-
-func registroPost(js []byte) bool {
-	client := ignorarHTTPS()
-
-	data := url.Values{}
-	data.Set("cmd", "registro")
-	data.Set("mensaje", encode64(js))
-	client.PostForm(urlServer, data)
-	fmt.Println("a")
-	return true
-}
-
 func consultarCuentas(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Tus cuentas__\n")
-
 	//serializar a JSON
 	m := cuentaRes{boss, "", "", ""}
 	cuentaJSON, err := json.Marshal(m)
@@ -171,7 +157,6 @@ func consultarCuentas(boss string) bool { //boss es el nombre del usuario loguea
 }
 
 func consultarCuentasPost(js []byte) bool {
-
 	client := ignorarHTTPS()
 
 	data := url.Values{}
@@ -204,54 +189,26 @@ func imprimirConsulta(info map[string]datos) string {
 	return s
 }
 
-func añadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
+func anyadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Añadir nueva cuenta__\n")
-
-	//Pedir datos
-	var servicio string
+	var nCuenta cuentaRes
+	nCuenta.Boss = boss
 	fmt.Printf("Nuevo servicio: ")
-	fmt.Scanf("%s\n", &servicio)
-
-	//Pedir datos
-	var user string
+	fmt.Scanf("%s\n", &nCuenta.Servicio)
 	fmt.Printf("Nuevo nombre de usuario: ")
-	fmt.Scanf("%s\n", &user)
-
-	var password string
+	fmt.Scanf("%s\n", &nCuenta.User)
 	fmt.Printf("Nueva contraseña: ")
-	fmt.Scanf("%s\n", &password)
-
+	fmt.Scanf("%s\n", &nCuenta.Password)
 	//serializar a JSON
-	m := cuentaRes{boss, servicio, user, password}
-	cuentaJSON, err := json.Marshal(m)
+	cuentaJSON, err := json.Marshal(nCuenta)
 	chkError(err)
-	correct := añadirCuentaPost(cuentaJSON)
-
+	correct := metodoPost(cuentaJSON, "añadirCuenta")
 	if correct {
 		fmt.Printf("Añadida correctamente!\n\n")
 	} else {
 		fmt.Printf("Error!\n\n")
 	}
 	return correct
-}
-
-func añadirCuentaPost(js []byte) bool {
-
-	client := ignorarHTTPS()
-
-	data := url.Values{}
-	data.Set("cmd", "añadirCuenta")
-	data.Set("mensaje", encode64(js))
-	r, err := client.PostForm(urlServer, data) // enviamos por POST
-	chkError(err)
-
-	var respJS resp
-	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	json.NewDecoder(r.Body).Decode(&respJS)
-	if respJS.Ok {
-		return true
-	}
-	return false
 }
 
 func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
@@ -319,21 +276,21 @@ func registro() bool {
 	var user, passwd, tempPasswd, mail string
 	var correct bool
 	//Pedimos el nombre de usuario
-	fmt.Println("Introduce tu nombre de usuario")
+	fmt.Printf("Introduce tu nombre de usuario: ")
 	n, err := fmt.Scanf("%s\n", &user)
 	if err != nil {
 		fmt.Println(n, err)
 	}
 	//Pedimos la contraseña
 	for {
-		fmt.Println("Introduce tu contraseña")
+		fmt.Printf("Introduce tu contraseña: ")
 		n, err = fmt.Scanf("%s\n", &passwd)
 		if err != nil {
 			fmt.Println(n, err)
 		}
 
 		//Volvemos a pedir la contraseña
-		fmt.Println("Vuelve a introducir tu contraseña")
+		fmt.Printf("Vuelve a introducir tu contraseña: ")
 		n, err = fmt.Scanf("%s\n", &tempPasswd)
 		if err != nil {
 			fmt.Println(n, err)
@@ -345,7 +302,7 @@ func registro() bool {
 		}
 	}
 	//Pedimos el email
-	fmt.Printf("Introduce tu email\n")
+	fmt.Printf("Introduce tu email: ")
 	n, err = fmt.Scanf("%s\n", &mail)
 	if err != nil {
 		fmt.Println(n, err)
@@ -361,31 +318,119 @@ func registro() bool {
 	if err != nil {
 		fmt.Println(error)
 	}
-	correct = registroPost(b)
+	correct = metodoPost(b, "registro")
 	if correct {
 		fmt.Printf("Registrado correctamente\n")
+	}
+	menuLogueado(newUser.User)
+	return correct
+}
+
+func generarPassword() {
+	var str_size int
+	fmt.Printf("Inserta longitud del Password: ")
+	fmt.Scanf("%d\n", &str_size)
+	alphanum := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, str_size)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	fmt.Println(string(bytes))
+}
+
+func anyadirTarjeta(username string) bool {
+	fmt.Printf("\n__Añadir nueva Tarjeta__\n")
+	var nCard tarjeta
+	nCard.Username = username
+	fmt.Printf("Entidad: ")
+	fmt.Scanf("%s\n", &nCard.Entidad)
+	fmt.Printf("Numero de Tarjeta: ")
+	fmt.Scanf("%s\n", &nCard.NTarjeta)
+	fmt.Printf("Codigo de Seguridad: ")
+	fmt.Scanf("%s\n", &nCard.CodSeg)
+	fmt.Printf("Fecha de tarjeta: ")
+	fmt.Scanf("%s\n", &nCard.Fecha)
+
+	cuentaJSON, err := json.Marshal(nCard)
+	chkError(err)
+	correct := metodoPost(cuentaJSON, "añadirTarjeta")
+	if correct {
+		fmt.Printf("Añadida correctamente!\n\n")
+	} else {
+		fmt.Printf("Error!\n\n")
 	}
 	return correct
 }
 
+func anyadirNotas(username string) bool {
+	fmt.Printf("__ Añadir nueva nota __\n")
+	reader := bufio.NewReader(os.Stdin)
+	var nNote notas
+	nNote.Username = username
+	fmt.Printf("Titulo: \n")
+	text, _ := reader.ReadString('\n')
+	nNote.Titulo = text
+	fmt.Printf("Texto: \n")
+	text, _ = reader.ReadString('\n')
+	nNote.Cuerpo = text
+	cuentaJSON, err := json.Marshal(nNote)
+	chkError(err)
+	correct := metodoPost(cuentaJSON, "añadirNota")
+	if correct {
+		fmt.Printf("Nueva Nota!\n\n")
+	} else {
+		fmt.Printf("Error!\n\n")
+	}
+	return correct
+}
+
+func metodoPost(js []byte, comando string) bool {
+	client := ignorarHTTPS()
+	data := url.Values{}
+	data.Set("cmd", comando)
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data)
+	chkError(err)
+	var respJS resp
+	json.NewDecoder(r.Body).Decode(&respJS)
+	if respJS.Ok {
+		return true
+	}
+	return false
+}
+
 func menuLogueado(username string) {
 	var opcion int
-	fmt.Printf("----------Bienvenido %s-------", username)
-	fmt.Println("-------------------------")
-	fmt.Printf("1 - Consultar cuentas\n")
-	fmt.Printf("2 - Agregar cuenta\n")
-	fmt.Printf("3 - Eliminar cuenta\n")
-	fmt.Printf("4 - Salir\n")
-	fmt.Printf("Opción: ")
-	fmt.Scanf("%d\n", &opcion)
-	switch opcion {
-	case 1:
-		consultarCuentas(username)
-	case 2:
-		añadirCuenta(username)
-	case 3:
-		eliminarCuenta(username)
-	default:
-		break
+	for opcion != 7 {
+		fmt.Printf("----------Bienvenido %s-------", username)
+		fmt.Println("-------------------------")
+		fmt.Printf("1 - Consultar cuentas\n")
+		fmt.Printf("2 - Agregar cuenta\n")
+		fmt.Printf("3 - Agregar Tarjeta\n")
+		fmt.Printf("4 - Agregar Nota\n")
+		fmt.Printf("5 - Eliminar cuenta\n")
+		fmt.Printf("6 - Generar Password\n")
+		fmt.Printf("7 - Salir\n")
+		fmt.Printf("Opción: ")
+		fmt.Scanf("%d\n", &opcion)
+		switch opcion {
+		case 1:
+			consultarCuentas(username)
+		case 2:
+			anyadirCuenta(username)
+		case 3:
+			anyadirTarjeta(username)
+		case 4:
+			anyadirNotas(username)
+		case 5:
+			eliminarCuenta(username)
+		case 6:
+			generarPassword()
+		case 7:
+			break
+		default:
+			fmt.Println("Opcion Incorrecta !!")
+		}
 	}
 }
