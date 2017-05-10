@@ -28,4 +28,4 @@ _testmain.go
 *.prof
 
 # files
-src/server/bbdd.json
+/src/server/bbdd.json
