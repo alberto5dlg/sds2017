@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -151,7 +153,10 @@ func consultarCuentas(resp string) map[string]datos {
 
 func nuevoUsuario(username string, password string, email string) {
 	var newUser usuario
-	newUser.Password = password
+	//newUser.Password = password
+	hasher := md5.New()
+	hasher.Write([]byte(password))
+	newUser.Password = hex.EncodeToString(hasher.Sum(nil))
 	newUser.Email = email
 	newUser.Info = make(map[string]datos)
 	newUser.Tarjetas = make(map[string]tarjeta)
@@ -202,7 +207,11 @@ func compLogin(resp string) bool {
 	var log login
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
-	if gUsuarios[log.User].Password == log.Password {
+	hasher := md5.New()
+	hasher.Write([]byte(log.Password))
+	password := hex.EncodeToString(hasher.Sum(nil))
+
+	if gUsuarios[log.User].Password == password {
 		return true
 	}
 	return false

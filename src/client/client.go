@@ -2,14 +2,19 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -175,20 +180,75 @@ func consultarCuentasPost(js []byte) bool {
 	}
 	return true
 }
-
+func descifrarPassword(tempPass string) []byte {
+	key := []byte("EE5A3DBFBAF8C3ACDE8A685914F25333")
+	password := decode64(tempPass)
+	ciphertext, err := decrypt(password, key)
+	if err != nil {
+		// TODO: Properly handle error
+		log.Fatal("hola")
+	}
+	return ciphertext
+}
 func imprimirConsulta(info map[string]datos) string {
 	var s string
 	if len(info) == 0 {
 		s = "No hay ninguna cuenta.\n"
 	} else {
-
 		for key, val := range info {
-			s += fmt.Sprintf("#%s:\n\tUsuario: %s\n\tContraseña: %s\n", key, val.User, val.Pass)
+			var password = descifrarPassword(val.Pass)
+			s += fmt.Sprintf("#%s:\n\tUsuario: %s\n\tContraseña: %s\n", key, val.User, password)
 		}
 	}
 	return s
 }
+func decrypt(password []byte, key []byte) ([]byte, error) {
+	c, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
 
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(password) < nonceSize {
+		return nil, errors.New("ciphertext too short")
+	}
+
+	nonce, password := password[:nonceSize], password[nonceSize:]
+	return gcm.Open(nil, nonce, password, nil)
+}
+func encrypt(password []byte, key []byte) ([]byte, error) {
+	c, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	return gcm.Seal(nonce, nonce, password, nil), nil
+}
+
+func cifrarPassword(tempPass string) string {
+	key := []byte("EE5A3DBFBAF8C3ACDE8A685914F25333")
+	password := []byte(tempPass)
+	ciphertext, err := encrypt(password, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var result = encode64(ciphertext)
+	return result
+}
 func anyadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Añadir nueva cuenta__\n")
 	var nCuenta cuentaRes
@@ -199,6 +259,8 @@ func anyadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Scanf("%s\n", &nCuenta.User)
 	fmt.Printf("Nueva contraseña: ")
 	fmt.Scanf("%s\n", &nCuenta.Password)
+	nCuenta.Password = cifrarPassword(nCuenta.Password)
+
 	//serializar a JSON
 	cuentaJSON, err := json.Marshal(nCuenta)
 	chkError(err)
