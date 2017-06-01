@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/md5"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -154,9 +155,9 @@ func consultarCuentas(resp string) map[string]datos {
 func nuevoUsuario(username string, password string, email string) {
 	var newUser usuario
 	//newUser.Password = password
-	hasher := md5.New()
-	hasher.Write([]byte(password))
-	newUser.Password = hex.EncodeToString(hasher.Sum(nil))
+	hasher := sha512.Sum512([]byte(password))
+	newUser.Password = encode64(hasher[:])
+
 	newUser.Email = email
 	newUser.Info = make(map[string]datos)
 	newUser.Tarjetas = make(map[string]tarjeta)
@@ -193,6 +194,10 @@ func anyadirNotas(username string, titulo string, cuerpo string) {
 	notes.Titulo = titulo
 	notes.Cuerpo = cuerpo
 	gUsuarios[username].Notas[titulo] = notes
+}
+
+func encode64(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data)
 }
 
 func decode64(s string) []byte {

@@ -135,12 +135,6 @@ func login() bool {
 	hasher := sha512.Sum512([]byte(password))
 	keyCifrado = hasher[32:64] // Utilizaremos la segunda mitad como key para el cifrado
 	password = encode64(hasher[:])
-	fmt.Printf("%s\n", encode64(keyCifrado))
-	fmt.Printf("%s\n", encode64(hasher[:]))
-
-	/*hasher := md5.New()
-	hasher.Write([]byte(password))
-	password = hex.EncodeToString(hasher.Sum(nil))*/
 
 	//serializar a JSON
 	m := userRes{user, password}
@@ -377,9 +371,6 @@ func registro() bool {
 	//Generamos el hash a partir de la contraseña
 	hasher := sha512.Sum512([]byte(passwd))
 	passwd = encode64(hasher[:])
-
-	/*	hasher := md5.New()
-		hasher.Write([]byte(passwd))*/
 
 	//Ahora almacenamos el usuario en formato Json
 	newUser := structUser{user, passwd, mail}
