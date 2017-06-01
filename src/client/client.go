@@ -4,11 +4,10 @@ import (
 	"bufio"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"crypto/rand"
+	"crypto/sha512"
 	"crypto/tls"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +20,7 @@ import (
 )
 
 var urlServer = "https://127.0.0.1:8081"
+var keyCifrado []byte
 
 type datos struct {
 	User string
@@ -131,9 +131,16 @@ func login() bool {
 	fmt.Printf("Contraseña: ")
 	fmt.Scanf("%s\n", &password)
 
-	hasher := md5.New()
+	//Generamos el hash a partir de la contraseña
+	hasher := sha512.Sum512([]byte(password))
+	keyCifrado = hasher[32:64] // Utilizaremos la segunda mitad como key para el cifrado
+	password = encode64(hasher[:])
+	fmt.Printf("%s\n", encode64(keyCifrado))
+	fmt.Printf("%s\n", encode64(hasher[:]))
+
+	/*hasher := md5.New()
 	hasher.Write([]byte(password))
-	password = hex.EncodeToString(hasher.Sum(nil))
+	password = hex.EncodeToString(hasher.Sum(nil))*/
 
 	//serializar a JSON
 	m := userRes{user, password}
@@ -181,9 +188,8 @@ func consultarCuentasPost(js []byte) bool {
 	return true
 }
 func descifrarPassword(tempPass string) []byte {
-	key := []byte("EE5A3DBFBAF8C3ACDE8A685914F25333")
 	password := decode64(tempPass)
-	ciphertext, err := decrypt(password, key)
+	ciphertext, err := decrypt(password, keyCifrado)
 	if err != nil {
 		// TODO: Properly handle error
 		log.Fatal("hola")
@@ -240,9 +246,8 @@ func encrypt(password []byte, key []byte) ([]byte, error) {
 }
 
 func cifrarPassword(tempPass string) string {
-	key := []byte("EE5A3DBFBAF8C3ACDE8A685914F25333")
 	password := []byte(tempPass)
-	ciphertext, err := encrypt(password, key)
+	ciphertext, err := encrypt(password, keyCifrado)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -370,9 +375,11 @@ func registro() bool {
 		fmt.Println(n, err)
 	}
 	//Generamos el hash a partir de la contraseña
-	hasher := md5.New()
-	hasher.Write([]byte(passwd))
-	passwd = hex.EncodeToString(hasher.Sum(nil))
+	hasher := sha512.Sum512([]byte(passwd))
+	passwd = encode64(hasher[:])
+
+	/*	hasher := md5.New()
+		hasher.Write([]byte(passwd))*/
 
 	//Ahora almacenamos el usuario en formato Json
 	newUser := structUser{user, passwd, mail}
