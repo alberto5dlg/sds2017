@@ -1,6 +1,8 @@
 package main
 
 import (
+
+	"crypto/rand"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
@@ -14,6 +16,7 @@ import (
 )
 
 var gUsuarios = map[string]usuario{}
+var gtoken = map[string]string{}
 
 type login struct {
 	User     string
@@ -206,7 +209,7 @@ func decode64(s string) []byte {
 	return b
 }
 
-func compLogin(resp string) bool {
+func compLogin(resp string) string {
 	var log login
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
@@ -214,17 +217,32 @@ func compLogin(resp string) bool {
 	password := encode64(hasher[:])
 
 	if gUsuarios[log.User].Password == password {
-		return true
+		token := generarToken()
+		gtoken[log.User] = token
+		return token
 	}
-	return false
+	return ""
 }
 
-func crearUsuario(resp string) bool {
+func crearUsuario(resp string) string {
 	var regis registro
 	datos := decode64(resp)
 	json.Unmarshal(datos, &regis)
 	nuevoUsuario(regis.User, regis.Password, regis.Email)
-	return true
+
+	token := generarToken()
+	gtoken[regis.User] = token
+	return token
+}
+
+func generarToken() string {
+	alphanum := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, 16)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -233,44 +251,60 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Form.Get("cmd") {
 	case "login":
-		if compLogin(r.Form.Get("mensaje")) {
-			response(w, true, "Login Correcto")
-		} else {
+		token := compLogin(r.Form.Get("mensaje"))
+		if token == "" {
 			response(w, false, "Login Erroneo")
+		} else {
+			response(w, true, token)
 		}
 
 	case "registro":
-		if crearUsuario(r.Form.Get("mensaje")) {
-			response(w, true, "Usuario Creado")
+		token := crearUsuario(r.Form.Get("mensaje"))
+		if token == "" {
+			response(w, false, "Registro Erroneo")
+		} else {
+			response(w, true, token)
 		}
 
 	case "añadirCuenta":
-		if crearCuenta(r.Form.Get("mensaje")) {
-			response(w, true, "Cuenta Creada")
-		} else {
-			response(w, false, "No se ha añadido Error")
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			if crearCuenta(r.Form.Get("mensaje")) {
+				response(w, true, "Cuenta Creada")
+			} else {
+				response(w, false, "No se ha añadido Error")
+			}
 		}
 
 	case "eliminarCuenta":
-		if eliminarCuenta(r.Form.Get("mensaje")) {
-			response(w, true, "Cuenta Eliminada")
-		} else {
-			response(w, false, "No se ha eliminado Error")
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			if eliminarCuenta(r.Form.Get("mensaje")) {
+				response(w, true, "Cuenta Eliminada")
+			} else {
+				response(w, false, "No se ha eliminado Error")
+			}
 		}
+
 	case "consultarCuentas":
-		responseJSON(w, true, consultarCuentas(r.Form.Get("mensaje")))
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			responseJSON(w, true, consultarCuentas(r.Form.Get("mensaje")))
+		}
 
 	case "añadirTarjeta":
-		if crearTarjeta(r.Form.Get("mensaje")) {
-			response(w, true, "Añadida la Tarjeta")
-		} else {
-			response(w, false, "No se ha podido añadir")
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			if crearTarjeta(r.Form.Get("mensaje")) {
+				response(w, true, "Añadida la Tarjeta")
+			} else {
+				response(w, false, "No se ha podido añadir")
+			}
 		}
+
 	case "añadirNota":
-		if crearNota(r.Form.Get("mensaje")) {
-			response(w, true, "Añadida la Nota")
-		} else {
-			response(w, false, "No se ha podido añadir")
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			if crearNota(r.Form.Get("mensaje")) {
+				response(w, true, "Añadida la Nota")
+			} else {
+				response(w, false, "No se ha podido añadir")
+			}
 		}
 	}
 }
