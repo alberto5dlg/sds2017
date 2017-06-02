@@ -21,6 +21,7 @@ import (
 
 var urlServer = "https://127.0.0.1:8081"
 var keyCifrado []byte
+var token string
 
 type datos struct {
 	User string
@@ -140,7 +141,7 @@ func login() bool {
 	m := userRes{user, password}
 	loginJSON, err := json.Marshal(m)
 	chkError(err)
-	correct := metodoPost(loginJSON, "login")
+	correct := metodoPostLoginRegistro(loginJSON, "login")
 
 	if correct {
 		fmt.Printf("Bienvenido!\n\n")
@@ -157,16 +158,18 @@ func consultarCuentas(boss string) bool { //boss es el nombre del usuario loguea
 	m := cuentaRes{boss, "", "", ""}
 	cuentaJSON, err := json.Marshal(m)
 	chkError(err)
-	correct := consultarCuentasPost(cuentaJSON)
+	correct := consultarCuentasPost(cuentaJSON, boss)
 
 	return correct
 }
 
-func consultarCuentasPost(js []byte) bool {
+func consultarCuentasPost(js []byte, username string) bool {
 	client := ignorarHTTPS()
 
 	data := url.Values{}
 	data.Set("cmd", "consultarCuentas")
+	data.Set("username", username)
+	data.Set("token", token)
 	data.Set("mensaje", encode64(js))
 	r, err := client.PostForm(urlServer, data) // enviamos por POST
 	chkError(err)
@@ -248,6 +251,7 @@ func cifrarPassword(tempPass string) string {
 	var result = encode64(ciphertext)
 	return result
 }
+
 func anyadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Añadir nueva cuenta__\n")
 	var nCuenta cuentaRes
@@ -263,7 +267,7 @@ func anyadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	//serializar a JSON
 	cuentaJSON, err := json.Marshal(nCuenta)
 	chkError(err)
-	correct := metodoPost(cuentaJSON, "añadirCuenta")
+	correct := metodoPost(cuentaJSON, "añadirCuenta", boss)
 	if correct {
 		fmt.Printf("Añadida correctamente!\n\n")
 	} else {
@@ -289,7 +293,7 @@ func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	m := cuentaRes{boss, servicio, "", ""}
 	cuentaJSON, err := json.Marshal(m)
 	chkError(err)
-	correct := eliminarCuentaPost(cuentaJSON)
+	correct := eliminarCuentaPost(cuentaJSON, boss)
 
 	if correct {
 		fmt.Printf("\n\n")
@@ -299,12 +303,14 @@ func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	return correct
 }
 
-func eliminarCuentaPost(js []byte) bool {
+func eliminarCuentaPost(js []byte, username string) bool {
 
 	client := ignorarHTTPS()
 
 	data := url.Values{}
 	data.Set("cmd", "eliminarCuenta")
+	data.Set("username", username)
+	data.Set("token", token)
 	data.Set("mensaje", encode64(js))
 	r, err := client.PostForm(urlServer, data) // enviamos por POST
 	chkError(err)
@@ -378,7 +384,7 @@ func registro() bool {
 	if err != nil {
 		fmt.Println(error)
 	}
-	correct = metodoPost(b, "registro")
+	correct = metodoPostLoginRegistro(b, "registro")
 	if correct {
 		fmt.Printf("Registrado correctamente\n")
 	}
@@ -387,11 +393,11 @@ func registro() bool {
 }
 
 func generarPassword() {
-	var str_size int
+	var strSize int
 	fmt.Printf("Inserta longitud del Password: ")
-	fmt.Scanf("%d\n", &str_size)
+	fmt.Scanf("%d\n", &strSize)
 	alphanum := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, str_size)
+	var bytes = make([]byte, strSize)
 	rand.Read(bytes)
 	for i, b := range bytes {
 		bytes[i] = alphanum[b%byte(len(alphanum))]
@@ -414,7 +420,7 @@ func anyadirTarjeta(username string) bool {
 
 	cuentaJSON, err := json.Marshal(nCard)
 	chkError(err)
-	correct := metodoPost(cuentaJSON, "añadirTarjeta")
+	correct := metodoPost(cuentaJSON, "añadirTarjeta", username)
 	if correct {
 		fmt.Printf("Añadida correctamente!\n\n")
 	} else {
@@ -436,7 +442,7 @@ func anyadirNotas(username string) bool {
 	nNote.Cuerpo = text
 	cuentaJSON, err := json.Marshal(nNote)
 	chkError(err)
-	correct := metodoPost(cuentaJSON, "añadirNota")
+	correct := metodoPost(cuentaJSON, "añadirNota", username)
 	if correct {
 		fmt.Printf("Nueva Nota!\n\n")
 	} else {
@@ -445,7 +451,28 @@ func anyadirNotas(username string) bool {
 	return correct
 }
 
-func metodoPost(js []byte, comando string) bool {
+func metodoPost(js []byte, comando string, username string) bool {
+	client := ignorarHTTPS()
+	data := url.Values{}
+	data.Set("cmd", comando)
+	data.Set("username", username)
+	data.Set("token", token)
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data)
+	chkError(err)
+	var respJS resp
+	json.NewDecoder(r.Body).Decode(&respJS)
+
+	if respJS.Ok {
+		if comando == "login" || comando == "registro" {
+			token = respJS.Msg
+		}
+		return true
+	}
+	return false
+}
+
+func metodoPostLoginRegistro(js []byte, comando string) bool {
 	client := ignorarHTTPS()
 	data := url.Values{}
 	data.Set("cmd", comando)
@@ -454,7 +481,11 @@ func metodoPost(js []byte, comando string) bool {
 	chkError(err)
 	var respJS resp
 	json.NewDecoder(r.Body).Decode(&respJS)
+
 	if respJS.Ok {
+		if comando == "login" || comando == "registro" {
+			token = respJS.Msg
+		}
 		return true
 	}
 	return false
