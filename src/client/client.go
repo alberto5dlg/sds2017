@@ -376,6 +376,7 @@ func registro() bool {
 	}
 	//Generamos el hash a partir de la contraseña
 	hasher := sha512.Sum512([]byte(passwd))
+	keyCifrado = hasher[32:64] // Utilizaremos la segunda mitad como key para el cifrado
 	passwd = encode64(hasher[:])
 
 	//Ahora almacenamos el usuario en formato Json
@@ -417,6 +418,9 @@ func anyadirTarjeta(username string) bool {
 	fmt.Scanf("%s\n", &nCard.CodSeg)
 	fmt.Printf("Fecha de tarjeta: ")
 	fmt.Scanf("%s\n", &nCard.Fecha)
+	nCard.CodSeg = cifrarPassword(nCard.CodSeg)
+	nCard.Fecha = cifrarPassword(nCard.Fecha)
+	nCard.NTarjeta = cifrarPassword(nCard.NTarjeta)
 
 	cuentaJSON, err := json.Marshal(nCard)
 	chkError(err)
@@ -440,6 +444,11 @@ func anyadirNotas(username string) bool {
 	fmt.Printf("Texto: \n")
 	text, _ = reader.ReadString('\n')
 	nNote.Cuerpo = text
+
+	//nCuenta.Password = cifrarPassword(nCuenta.Password)
+	nNote.Titulo = cifrarPassword(nNote.Titulo)
+	nNote.Cuerpo = cifrarPassword(nNote.Cuerpo)
+
 	cuentaJSON, err := json.Marshal(nNote)
 	chkError(err)
 	correct := metodoPost(cuentaJSON, "añadirNota", username)
