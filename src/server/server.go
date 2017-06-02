@@ -1,10 +1,8 @@
 package main
 
 import (
-	"crypto/md5"
 	"crypto/sha512"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -212,9 +210,8 @@ func compLogin(resp string) bool {
 	var log login
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
-	hasher := md5.New()
-	hasher.Write([]byte(log.Password))
-	password := hex.EncodeToString(hasher.Sum(nil))
+	hasher := sha512.Sum512([]byte(log.Password))
+	password := encode64(hasher[:])
 
 	if gUsuarios[log.User].Password == password {
 		return true
