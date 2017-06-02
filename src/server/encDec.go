@@ -61,11 +61,13 @@ func encryptFile() (out []byte) {
 func decryptFile() {
 	checkKey()
 	z, err := ioutil.ReadFile("bbdd.json")
-	result := decrypt(key, z)
-	err = ioutil.WriteFile("bbdd.json", result, 0777)
-	if err != nil {
-		fmt.Printf("No se puede crear el fichero\n")
-		os.Exit(0)
+	if len(z) != 0 {
+		result := decrypt(key, z)
+		err = ioutil.WriteFile("bbdd.json", result, 0777)
+		if err != nil {
+			fmt.Printf("No se puede crear el fichero\n")
+			os.Exit(0)
+		}
 	}
 }
 

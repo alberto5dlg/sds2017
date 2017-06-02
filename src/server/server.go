@@ -103,12 +103,14 @@ func responseJSON(w io.Writer, ok bool, info map[string]datos) {
 }
 
 func cargarBD() bool {
+	decryptFile()
 	raw, err := ioutil.ReadFile("bbdd.json")
 	if err != nil {
 		fmt.Println(err.Error())
 		return false
 	}
 	json.Unmarshal(raw, &gUsuarios)
+	encryptFile()
 	return true
 }
 
@@ -118,6 +120,7 @@ func guardarBD() {
 		fmt.Println(err)
 	}
 	ioutil.WriteFile("bbdd.json", jsonString, 0644)
+	//encryptFile()
 }
 
 //añadimos una nueva cuenta con su usuario y contraseña EJ. Facebook "username" "password"
@@ -321,10 +324,8 @@ func conectServer() {
 }
 
 func main() {
-	//decryptFile()
 	cargarBD()
-	//encryptFile()
 	conectServer()
 	guardarBD()
-	//encryptFile()
+	encryptFile()
 }
