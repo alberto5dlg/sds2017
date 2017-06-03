@@ -66,3 +66,7 @@ type notas struct {
 	Titulo string
 	Cuerpo string
 }
+
+type struAuth struct {
+	Clave string
+}

@@ -96,11 +96,26 @@ func login() bool {
 	correct := metodoPostLoginRegistro(loginJSON, "login")
 
 	if correct {
-		fmt.Printf("Bienvenido!\n\n")
-		menuLogueado(user)
+		if compDA(user) {
+			fmt.Printf("Bienvenido!\n\n")
+			menuLogueado(user)
+		} else {
+			fmt.Printf("Error en Doble Autenticacion!\n\n")
+		}
 	} else {
 		fmt.Printf("Error!\n\n")
 	}
+	return correct
+}
+
+func compDA(user string) bool {
+	var clave string
+	fmt.Printf("Introduce la clave enviada al Mail: ")
+	fmt.Scanf("%s\n", &clave)
+	da := struAuth{clave}
+	daJSON, err := json.Marshal(da)
+	chkError(err)
+	correct := metodoPost(daJSON, "dobleAuth", user)
 	return correct
 }
 
