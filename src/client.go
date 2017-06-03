@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,53 +21,6 @@ import (
 var urlServer = "https://127.0.0.1:8081"
 var keyCifrado []byte
 var token string
-
-type datos struct {
-	User string
-	Pass string
-}
-
-type userRes struct {
-	User     string
-	Password string
-}
-
-type cuentaRes struct {
-	Boss     string
-	Servicio string
-	User     string
-	Password string
-}
-
-type structUser struct {
-	User     string
-	Password string
-	Email    string
-}
-
-type resp struct {
-	Ok  bool
-	Msg string
-}
-
-type respJSON struct {
-	Ok   bool
-	Info map[string]datos
-}
-
-type tarjeta struct {
-	Username string
-	Entidad  string
-	NTarjeta string
-	Fecha    string
-	CodSeg   string
-}
-
-type notas struct {
-	Username string
-	Titulo   string
-	Cuerpo   string
-}
 
 func chkError(err error) {
 	if err != nil {
@@ -138,7 +90,7 @@ func login() bool {
 	password = encode64(hasher[:])
 
 	//serializar a JSON
-	m := userRes{user, password}
+	m := logueado{user, password}
 	loginJSON, err := json.Marshal(m)
 	chkError(err)
 	correct := metodoPostLoginRegistro(loginJSON, "login")
@@ -155,7 +107,7 @@ func login() bool {
 func consultarCuentas(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Tus cuentas__\n")
 	//serializar a JSON
-	m := cuentaRes{boss, "", "", ""}
+	m := cuenta{boss, "", "", ""}
 	cuentaJSON, err := json.Marshal(m)
 	chkError(err)
 	correct := consultarCuentasPost(cuentaJSON, boss)
@@ -187,10 +139,7 @@ func consultarCuentasPost(js []byte, username string) bool {
 func descifrarPassword(tempPass string) []byte {
 	password := decode64(tempPass)
 	ciphertext, err := decrypt(password, keyCifrado)
-	if err != nil {
-		// TODO: Properly handle error
-		log.Fatal("hola")
-	}
+	chkError(err)
 	return ciphertext
 }
 func imprimirConsulta(info map[string]datos) string {
@@ -245,16 +194,14 @@ func encrypt(password []byte, key []byte) ([]byte, error) {
 func cifrarPassword(tempPass string) string {
 	password := []byte(tempPass)
 	ciphertext, err := encrypt(password, keyCifrado)
-	if err != nil {
-		log.Fatal(err)
-	}
+	chkError(err)
 	var result = encode64(ciphertext)
 	return result
 }
 
 func anyadirCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Printf("\n__Añadir nueva cuenta__\n")
-	var nCuenta cuentaRes
+	var nCuenta cuenta
 	nCuenta.Boss = boss
 	fmt.Printf("Nuevo servicio: ")
 	fmt.Scanf("%s\n", &nCuenta.Servicio)
@@ -290,7 +237,7 @@ func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	fmt.Scanf("%s\n", &servicio)
 
 	//serializar a JSON
-	m := cuentaRes{boss, servicio, "", ""}
+	m := cuenta{boss, servicio, "", ""}
 	cuentaJSON, err := json.Marshal(m)
 	chkError(err)
 	correct := eliminarCuentaPost(cuentaJSON, boss)
@@ -371,20 +318,16 @@ func registro() bool {
 	//Pedimos el email
 	fmt.Printf("Introduce tu email: ")
 	n, err = fmt.Scanf("%s\n", &mail)
-	if err != nil {
-		fmt.Println(n, err)
-	}
+	chkError(err)
 	//Generamos el hash a partir de la contraseña
 	hasher := sha512.Sum512([]byte(passwd))
 	keyCifrado = hasher[32:64] // Utilizaremos la segunda mitad como key para el cifrado
 	passwd = encode64(hasher[:])
 
 	//Ahora almacenamos el usuario en formato Json
-	newUser := structUser{user, passwd, mail}
-	b, error := json.Marshal(&newUser)
-	if err != nil {
-		fmt.Println(error)
-	}
+	newUser := registrarse{user, passwd, mail}
+	b, err := json.Marshal(&newUser)
+	chkError(err)
 	correct = metodoPostLoginRegistro(b, "registro")
 	if correct {
 		fmt.Printf("Registrado correctamente\n")
@@ -408,7 +351,7 @@ func generarPassword() {
 
 func anyadirTarjeta(username string) bool {
 	fmt.Printf("\n__Añadir nueva Tarjeta__\n")
-	var nCard tarjeta
+	var nCard nTarjeta
 	nCard.Username = username
 	fmt.Printf("Entidad: ")
 	fmt.Scanf("%s\n", &nCard.Entidad)
@@ -436,7 +379,7 @@ func anyadirTarjeta(username string) bool {
 func anyadirNotas(username string) bool {
 	fmt.Printf("__ Añadir nueva nota __\n")
 	reader := bufio.NewReader(os.Stdin)
-	var nNote notas
+	var nNote nNotas
 	nNote.Username = username
 	fmt.Printf("Titulo: \n")
 	text, _ := reader.ReadString('\n')

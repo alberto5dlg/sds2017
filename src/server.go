@@ -5,7 +5,6 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,109 +16,39 @@ import (
 var gUsuarios = map[string]usuario{}
 var gtoken = map[string]string{}
 
-type login struct {
-	User     string
-	Password string
-}
-
-type cuenta struct {
-	Boss     string
-	Servicio string
-	User     string
-	Password string
-}
-
-type registro struct {
-	User     string
-	Password string
-	Email    string
-}
-
-type datos struct {
-	User string
-	Pass string
-}
-
-type usuario struct {
-	Email    string
-	Password string
-	Info     map[string]datos
-	Tarjetas map[string]tarjeta
-	Notas    map[string]notas
-}
-
-type resp struct {
-	Ok  bool
-	Msg string
-}
-
-type respJSON struct {
-	Ok   bool
-	Info map[string]datos
-}
-
-type nTarjeta struct {
-	Username string
-	Entidad  string
-	NTarjeta string
-	Fecha    string
-	CodSeg   string
-}
-
-type tarjeta struct {
-	Entidad  string
-	NTarjeta string
-	Fecha    string
-	CodSeg   string
-}
-
-type nNotas struct {
-	Username string
-	Titulo   string
-	Cuerpo   string
-}
-
-type notas struct {
-	Titulo string
-	Cuerpo string
+func chkError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 func response(w io.Writer, ok bool, msg string) {
 	r := resp{Ok: ok, Msg: msg}
 	rJSON, err := json.Marshal(&r)
-	if err != nil {
-		panic(err)
-	}
+	chkError(err)
 	w.Write(rJSON)
 }
 
 func responseJSON(w io.Writer, ok bool, info map[string]datos) {
 	r := respJSON{Ok: ok, Info: info}
 	rJSON, err := json.Marshal(&r)
-	if err != nil {
-		panic(err)
-	}
+	chkError(err)
 	w.Write(rJSON)
 }
 
 func cargarBD() bool {
 	decryptFile()
-	raw, err := ioutil.ReadFile("bbdd.json")
-	if err != nil {
-		fmt.Println(err.Error())
-		return false
-	}
+	raw, err := ioutil.ReadFile("./DB/bbdd.json")
+	chkError(err)
 	json.Unmarshal(raw, &gUsuarios)
-	encryptFile()
+	//encryptFile()
 	return true
 }
 
 func guardarBD() {
 	jsonString, err := json.Marshal(gUsuarios)
-	if err != nil {
-		fmt.Println(err)
-	}
-	ioutil.WriteFile("bbdd.json", jsonString, 0644)
+	chkError(err)
+	ioutil.WriteFile("./DB/bbdd.json", jsonString, 0644)
 	//encryptFile()
 }
 
@@ -151,13 +80,11 @@ func consultarCuentas(resp string) map[string]datos {
 	var cuen cuenta
 	datos := decode64(resp)
 	json.Unmarshal(datos, &cuen)
-
 	return gUsuarios[cuen.Boss].Info
 }
 
 func nuevoUsuario(username string, password string, email string) {
 	var newUser usuario
-	//newUser.Password = password
 	hasher := sha512.Sum512([]byte(password))
 	newUser.Password = encode64(hasher[:])
 
@@ -205,14 +132,12 @@ func encode64(data []byte) string {
 
 func decode64(s string) []byte {
 	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
+	chkError(err)
 	return b
 }
 
 func compLogin(resp string) string {
-	var log login
+	var log logueado
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
 	hasher := sha512.Sum512([]byte(log.Password))
@@ -227,7 +152,7 @@ func compLogin(resp string) string {
 }
 
 func crearUsuario(resp string) string {
-	var regis registro
+	var regis registrarse
 	datos := decode64(resp)
 	json.Unmarshal(datos, &regis)
 	nuevoUsuario(regis.User, regis.Password, regis.Email)
@@ -266,12 +191,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			response(w, false, "Registro Erroneo")
 		} else {
 			response(w, true, token)
+			guardarBD()
 		}
 
 	case "añadirCuenta":
 		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
 			if crearCuenta(r.Form.Get("mensaje")) {
 				response(w, true, "Cuenta Creada")
+				guardarBD()
 			} else {
 				response(w, false, "No se ha añadido Error")
 			}
@@ -281,6 +208,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
 			if eliminarCuenta(r.Form.Get("mensaje")) {
 				response(w, true, "Cuenta Eliminada")
+				guardarBD()
 			} else {
 				response(w, false, "No se ha eliminado Error")
 			}
@@ -295,6 +223,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
 			if crearTarjeta(r.Form.Get("mensaje")) {
 				response(w, true, "Añadida la Tarjeta")
+				guardarBD()
 			} else {
 				response(w, false, "No se ha podido añadir")
 			}
@@ -304,6 +233,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
 			if crearNota(r.Form.Get("mensaje")) {
 				response(w, true, "Añadida la Nota")
+				guardarBD()
 			} else {
 				response(w, false, "No se ha podido añadir")
 			}
@@ -317,7 +247,7 @@ func conectServer() {
 	signal.Notify(stopChan, os.Interrupt)
 	mux := http.NewServeMux()
 	mux.Handle("/", http.HandlerFunc(handler))
-	go http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", mux)
+	go http.ListenAndServeTLS(":8081", "./keys/cert.pem", "./keys/key.pem", mux)
 	<-stopChan
 	log.Println("Apagando servidor ...")
 	log.Println("Servidor detenido correctamente")
