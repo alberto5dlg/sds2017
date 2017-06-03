@@ -25,7 +25,7 @@ func rand_str(str_size int) string {
 
 func createPrivKey() []byte {
 	newkey := []byte(rand_str(32))
-	err := ioutil.WriteFile("key", newkey, 0644)
+	err := ioutil.WriteFile("./keys/key", newkey, 0644)
 	if err != nil {
 		fmt.Printf("Error creating Key file!")
 		os.Exit(0)
@@ -34,7 +34,7 @@ func createPrivKey() []byte {
 }
 
 func checkKey() {
-	thekey, err := ioutil.ReadFile("key")
+	thekey, err := ioutil.ReadFile("./keys/key")
 	if err != nil {
 		key = createPrivKey()
 	} else {
@@ -44,13 +44,13 @@ func checkKey() {
 
 func encryptFile() (out []byte) {
 	checkKey()
-	b, err := ioutil.ReadFile("bbdd.json")
+	b, err := ioutil.ReadFile("./DB/bbdd.json")
 	if err != nil {
 		fmt.Printf("No se puede abrir el fichero\n")
 		os.Exit(0)
 	}
 	ciphertext := encrypt(key, b)
-	err = ioutil.WriteFile("bbdd.json", ciphertext, 0644)
+	err = ioutil.WriteFile("./DB/bbdd.json", ciphertext, 0644)
 	if err != nil {
 		fmt.Printf("No se puede crear\n")
 		os.Exit(0)
@@ -60,10 +60,10 @@ func encryptFile() (out []byte) {
 
 func decryptFile() {
 	checkKey()
-	z, err := ioutil.ReadFile("bbdd.json")
+	z, err := ioutil.ReadFile("./DB/bbdd.json")
 	if len(z) != 0 {
 		result := decrypt(key, z)
-		err = ioutil.WriteFile("bbdd.json", result, 0777)
+		err = ioutil.WriteFile("./DB/bbdd.json", result, 0777)
 		if err != nil {
 			fmt.Printf("No se puede crear el fichero\n")
 			os.Exit(0)

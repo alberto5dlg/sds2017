@@ -38,17 +38,17 @@ func responseJSON(w io.Writer, ok bool, info map[string]datos) {
 
 func cargarBD() bool {
 	decryptFile()
-	raw, err := ioutil.ReadFile("bbdd.json")
+	raw, err := ioutil.ReadFile("./DB/bbdd.json")
 	chkError(err)
 	json.Unmarshal(raw, &gUsuarios)
-	encryptFile()
+	//encryptFile()
 	return true
 }
 
 func guardarBD() {
 	jsonString, err := json.Marshal(gUsuarios)
 	chkError(err)
-	ioutil.WriteFile("bbdd.json", jsonString, 0644)
+	ioutil.WriteFile("./DB/bbdd.json", jsonString, 0644)
 	//encryptFile()
 }
 
@@ -247,7 +247,7 @@ func conectServer() {
 	signal.Notify(stopChan, os.Interrupt)
 	mux := http.NewServeMux()
 	mux.Handle("/", http.HandlerFunc(handler))
-	go http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", mux)
+	go http.ListenAndServeTLS(":8081", "./keys/cert.pem", "./keys/key.pem", mux)
 	<-stopChan
 	log.Println("Apagando servidor ...")
 	log.Println("Servidor detenido correctamente")
