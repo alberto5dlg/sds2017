@@ -15,6 +15,7 @@ import (
 
 var gUsuarios = map[string]usuario{}
 var gtoken = map[string]string{}
+var clave string
 
 func chkError(err error) {
 	if err != nil {
@@ -66,6 +67,17 @@ func crearCuenta(resp string) bool {
 	json.Unmarshal(datos, &cuen)
 	nuevaCuenta(cuen.Boss, cuen.Servicio, cuen.User, cuen.Password)
 	return true
+}
+
+func comprobarDA(resp string) bool {
+	var da struAuth
+	datos := decode64(resp)
+	json.Unmarshal(datos, &da)
+	if da.Clave == clave {
+		return true
+	}
+	return false
+
 }
 
 func eliminarCuenta(resp string) bool {
@@ -136,7 +148,7 @@ func decode64(s string) []byte {
 	return b
 }
 
-func compLogin(resp string) string {
+func compLogin(resp string, clave string) string {
 	var log logueado
 	datos := decode64(resp)
 	json.Unmarshal(datos, &log)
@@ -146,6 +158,7 @@ func compLogin(resp string) string {
 	if gUsuarios[log.User].Password == password {
 		token := generarToken()
 		gtoken[log.User] = token
+		dobleAuth(log.User, clave)
 		return token
 	}
 	return ""
@@ -172,13 +185,22 @@ func generarToken() string {
 	return string(bytes)
 }
 
+func dobleAuth(log string, clave string) {
+	sender := NewSender("sdsGolang@gmail.com", "1234GOlang")
+	Receiver := []string{gUsuarios[log].Email}
+	Subject := "Inicio de Sesion"
+	bodyMessage := "Utiliza la siguiente clave " + clave
+	sender.SendMail(Receiver, Subject, bodyMessage)
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	w.Header().Set("Content-Type", "text/plain")
 
 	switch r.Form.Get("cmd") {
 	case "login":
-		token := compLogin(r.Form.Get("mensaje"))
+		clave = rand_str(10)
+		token := compLogin(r.Form.Get("mensaje"), clave)
 		if token == "" {
 			response(w, false, "Login Erroneo")
 		} else {
@@ -192,6 +214,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			response(w, true, token)
 			guardarBD()
+		}
+
+	case "dobleAuth":
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			if comprobarDA(r.Form.Get("mensaje")) {
+				response(w, true, "Autenticacion Correcta")
+			} else {
+				response(w, false, "Autenticacion Erronea")
+			}
 		}
 
 	case "añadirCuenta":
