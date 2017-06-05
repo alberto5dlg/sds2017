@@ -41,6 +41,16 @@ type respJSON struct {
 	Info map[string]datos
 }
 
+type respJSONTar struct {
+	Ok   bool
+	Info map[string]tarjeta
+}
+
+type respJSONNot struct {
+	Ok   bool
+	Info map[string]notas
+}
+
 type nTarjeta struct {
 	Username string
 	Entidad  string

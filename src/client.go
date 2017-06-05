@@ -151,12 +151,7 @@ func consultarCuentasPost(js []byte, username string) bool {
 	}
 	return true
 }
-func descifrarPassword(tempPass string) []byte {
-	password := decode64(tempPass)
-	ciphertext, err := decrypt(password, keyCifrado)
-	chkError(err)
-	return ciphertext
-}
+
 func imprimirConsulta(info map[string]datos) string {
 	var s string
 	if len(info) == 0 {
@@ -169,6 +164,109 @@ func imprimirConsulta(info map[string]datos) string {
 	}
 	return s
 }
+
+func consultarTarjeta(boss string) bool { //boss es el nombre del usuario logueado
+	fmt.Printf("\n__Tus tarjetas__\n")
+	//serializar a JSON
+	m := nTarjeta{boss, "", "", "", ""}
+	tarJSON, err := json.Marshal(m)
+	chkError(err)
+	correct := consultarTarjetaPost(tarJSON, boss)
+
+	return correct
+}
+
+func consultarTarjetaPost(js []byte, username string) bool {
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "consultarTarjetas")
+	data.Set("username", username)
+	data.Set("token", token)
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	chkError(err)
+
+	var respJS respJSONTar
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	json.NewDecoder(r.Body).Decode(&respJS)
+	fmt.Println(imprimirConsultaTarjeta(respJS.Info))
+
+	if imprimirConsultaTarjeta(respJS.Info) == "No hay ninguna tarjeta.\n" {
+		return false
+	}
+	return true
+}
+
+func imprimirConsultaTarjeta(info map[string]tarjeta) string {
+	var s string
+	if len(info) == 0 {
+		s = "No hay ninguna tarjeta.\n"
+	} else {
+		for key, val := range info {
+			var ntar = descifrarPassword(val.NTarjeta)
+			var fecha = descifrarPassword(val.Fecha)
+			var cod = descifrarPassword(val.CodSeg)
+			s += fmt.Sprintf("#%s:\n\tNumero de tarjeta: %s\n\tFecha de caducidad: %s\n\tCodigo de seguridad: %s\n", key, ntar, fecha, cod)
+		}
+	}
+	return s
+}
+
+func consultarNota(boss string) bool { //boss es el nombre del usuario logueado
+	fmt.Printf("\n__Tus notas__\n")
+	//serializar a JSON
+	m := nNotas{boss, "", ""}
+	notJSON, err := json.Marshal(m)
+	chkError(err)
+	correct := consultarNotaPost(notJSON, boss)
+
+	return correct
+}
+
+func consultarNotaPost(js []byte, username string) bool {
+	client := ignorarHTTPS()
+
+	data := url.Values{}
+	data.Set("cmd", "consultarNotas")
+	data.Set("username", username)
+	data.Set("token", token)
+	data.Set("mensaje", encode64(js))
+	r, err := client.PostForm(urlServer, data) // enviamos por POST
+	chkError(err)
+
+	var respJS respJSONNot
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	json.NewDecoder(r.Body).Decode(&respJS)
+	fmt.Println(imprimirConsultaNota(respJS.Info))
+
+	if imprimirConsultaNota(respJS.Info) == "No hay ninguna nota.\n" {
+		return false
+	}
+	return true
+}
+
+func imprimirConsultaNota(info map[string]notas) string {
+	var s string
+	if len(info) == 0 {
+		s = "No hay ninguna nota.\n"
+	} else {
+		for key, val := range info {
+			var titulo = descifrarPassword(key)
+			var cuerpo = descifrarPassword(val.Cuerpo)
+			s += fmt.Sprintf("#%s\t%s\n", titulo, cuerpo)
+		}
+	}
+	return s
+}
+
+func descifrarPassword(tempPass string) []byte {
+	password := decode64(tempPass)
+	ciphertext, err := decrypt(password, keyCifrado)
+	chkError(err)
+	return ciphertext
+}
+
 func decrypt(password []byte, key []byte) ([]byte, error) {
 	c, err := aes.NewCipher(key)
 	if err != nil {
@@ -188,6 +286,7 @@ func decrypt(password []byte, key []byte) ([]byte, error) {
 	nonce, password := password[:nonceSize], password[nonceSize:]
 	return gcm.Open(nil, nonce, password, nil)
 }
+
 func encrypt(password []byte, key []byte) ([]byte, error) {
 	c, err := aes.NewCipher(key)
 	if err != nil {
@@ -255,7 +354,7 @@ func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	m := cuenta{boss, servicio, "", ""}
 	cuentaJSON, err := json.Marshal(m)
 	chkError(err)
-	correct := eliminarCuentaPost(cuentaJSON, boss)
+	correct := metodoPost(cuentaJSON, "eliminarCuenta", boss)
 
 	if correct {
 		fmt.Printf("\n\n")
@@ -265,25 +364,31 @@ func eliminarCuenta(boss string) bool { //boss es el nombre del usuario logueado
 	return correct
 }
 
-func eliminarCuentaPost(js []byte, username string) bool {
+func eliminarTarjeta(boss string) bool { //boss es el nombre del usuario logueado
 
-	client := ignorarHTTPS()
-
-	data := url.Values{}
-	data.Set("cmd", "eliminarCuenta")
-	data.Set("username", username)
-	data.Set("token", token)
-	data.Set("mensaje", encode64(js))
-	r, err := client.PostForm(urlServer, data) // enviamos por POST
-	chkError(err)
-
-	var respJS resp
-	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	json.NewDecoder(r.Body).Decode(&respJS)
-	if respJS.Ok {
-		return true
+	if consultarTarjeta(boss) == false {
+		return false
 	}
-	return false
+
+	fmt.Printf("\n__Eliminar tarjeta__\n")
+
+	//Pedir datos
+	var entidad string
+	fmt.Printf("Selecciona la entidad: ")
+	fmt.Scanf("%s\n", &entidad)
+
+	//serializar a JSON
+	m := nTarjeta{boss, entidad, "", "", ""}
+	tarJSON, err := json.Marshal(m)
+	chkError(err)
+	correct := metodoPost(tarJSON, "eliminarTarjeta", boss)
+
+	if correct {
+		fmt.Printf("\n\n")
+	} else {
+		fmt.Printf("Error!\n\n")
+	}
+	return correct
 }
 
 func main() {
@@ -431,9 +536,6 @@ func metodoPost(js []byte, comando string, username string) bool {
 	json.NewDecoder(r.Body).Decode(&respJS)
 
 	if respJS.Ok {
-		if comando == "login" || comando == "registro" {
-			token = respJS.Msg
-		}
 		return true
 	}
 	return false
@@ -460,32 +562,41 @@ func metodoPostLoginRegistro(js []byte, comando string) bool {
 
 func menuLogueado(username string) {
 	var opcion int
-	for opcion != 7 {
+	for opcion != 10 {
 		fmt.Printf("----------Bienvenido %s-------", username)
 		fmt.Println("-------------------------")
 		fmt.Printf("1 - Consultar cuentas\n")
-		fmt.Printf("2 - Agregar cuenta\n")
-		fmt.Printf("3 - Agregar Tarjeta\n")
-		fmt.Printf("4 - Agregar Nota\n")
-		fmt.Printf("5 - Eliminar cuenta\n")
-		fmt.Printf("6 - Generar Password\n")
-		fmt.Printf("7 - Salir\n")
+		fmt.Printf("2 - Consultar tarjetas\n")
+		fmt.Printf("3 - Consultar notas\n")
+		fmt.Printf("4 - Agregar cuenta\n")
+		fmt.Printf("5 - Agregar Tarjeta\n")
+		fmt.Printf("6 - Agregar Nota\n")
+		fmt.Printf("7 - Eliminar cuenta\n")
+		fmt.Printf("8 - Eliminar tarjeta\n")
+		fmt.Printf("9 - Generar Password\n")
+		fmt.Printf("10 - Salir\n")
 		fmt.Printf("Opción: ")
 		fmt.Scanf("%d\n", &opcion)
 		switch opcion {
 		case 1:
 			consultarCuentas(username)
 		case 2:
-			anyadirCuenta(username)
+			consultarTarjeta(username)
 		case 3:
-			anyadirTarjeta(username)
+			consultarNota(username)
 		case 4:
-			anyadirNotas(username)
+			anyadirCuenta(username)
 		case 5:
-			eliminarCuenta(username)
+			anyadirTarjeta(username)
 		case 6:
-			generarPassword()
+			anyadirNotas(username)
 		case 7:
+			eliminarCuenta(username)
+		case 8:
+			eliminarTarjeta(username)
+		case 9:
+			generarPassword()
+		case 10:
 			break
 		default:
 			fmt.Println("Opcion Incorrecta !!")
