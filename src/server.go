@@ -37,6 +37,20 @@ func responseJSON(w io.Writer, ok bool, info map[string]datos) {
 	w.Write(rJSON)
 }
 
+func responseJSONTarjeta(w io.Writer, ok bool, info map[string]tarjeta) {
+	r := respJSONTar{Ok: ok, Info: info}
+	rJSON, err := json.Marshal(&r)
+	chkError(err)
+	w.Write(rJSON)
+}
+
+func responseJSONNota(w io.Writer, ok bool, info map[string]notas) {
+	r := respJSONNot{Ok: ok, Info: info}
+	rJSON, err := json.Marshal(&r)
+	chkError(err)
+	w.Write(rJSON)
+}
+
 func cargarBD() bool {
 	decryptFile()
 	raw, err := ioutil.ReadFile("./DB/bbdd.json")
@@ -88,11 +102,33 @@ func eliminarCuenta(resp string) bool {
 	return true
 }
 
+func eliminarTarjeta(resp string) bool {
+	var tar nTarjeta
+	datos := decode64(resp)
+	json.Unmarshal(datos, &tar)
+	delete(gUsuarios[tar.Username].Tarjetas, tar.Entidad)
+	return true
+}
+
 func consultarCuentas(resp string) map[string]datos {
 	var cuen cuenta
 	datos := decode64(resp)
 	json.Unmarshal(datos, &cuen)
 	return gUsuarios[cuen.Boss].Info
+}
+
+func consultarTarjetas(resp string) map[string]tarjeta {
+	var tar nTarjeta
+	datos := decode64(resp)
+	json.Unmarshal(datos, &tar)
+	return gUsuarios[tar.Username].Tarjetas
+}
+
+func consultarNotas(resp string) map[string]notas {
+	var not nNotas
+	datos := decode64(resp)
+	json.Unmarshal(datos, &not)
+	return gUsuarios[not.Username].Notas
 }
 
 func nuevoUsuario(username string, password string, email string) {
@@ -245,9 +281,29 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+	case "eliminarTarjeta":
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			if eliminarTarjeta(r.Form.Get("mensaje")) {
+				response(w, true, "Tarjeta Eliminada")
+				guardarBD()
+			} else {
+				response(w, false, "No se ha eliminado Error")
+			}
+		}
+
 	case "consultarCuentas":
 		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
 			responseJSON(w, true, consultarCuentas(r.Form.Get("mensaje")))
+		}
+
+	case "consultarTarjetas":
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			responseJSONTarjeta(w, true, consultarTarjetas(r.Form.Get("mensaje")))
+		}
+
+	case "consultarNotas":
+		if gtoken[r.Form.Get("username")] == r.Form.Get("token") {
+			responseJSONNota(w, true, consultarNotas(r.Form.Get("mensaje")))
 		}
 
 	case "añadirTarjeta":
